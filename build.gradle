@@ -38,11 +38,14 @@ dependencies {
     implementation "org.springframework:spring-context:${springContextVersion}"
     implementation "org.xerial:sqlite-jdbc:${sqliteVersion}"
     implementation "org.hibernate.orm:hibernate-community-dialects:${hibernateOrmVersion}"    // Needed for SQLite
+    testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
+    testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${jupiterVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-params:${jupiterVersion}"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${jupiterVersion}"
     testImplementation "org.hamcrest:hamcrest:${hamcrestVersion}"
     testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+    testImplementation "org.springframework.boot:spring-boot-starter-test:${springBootVersion}"
 }
 
 test {
