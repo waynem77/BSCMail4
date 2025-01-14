@@ -1,7 +1,12 @@
 package io.github.waynem77.bscmail4;
 
 import lombok.NonNull;
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
 
+import java.util.Collection;
 import java.util.Random;
 import java.util.UUID;
 
@@ -42,5 +47,40 @@ public class TestUtils
     public static Long randomLong()
     {
         return random.nextLong();
+    }
+
+    /**
+     * Returns a randomly-generated boolean.
+     *
+     * @return a randomly-generated boolean
+     */
+    public static boolean randomBoolean()
+    {
+        return random.nextBoolean();
+    }
+
+    public static Matcher<Collection> equalToUnordered(Collection expected)
+    {
+        if (expected == null)
+        {
+            return CoreMatchers.nullValue(Collection.class);
+        }
+
+        return new BaseMatcher<Collection>()
+        {
+            @Override
+            public boolean matches(Object actual)
+            {
+                return (actual instanceof Collection) &&
+                        expected.containsAll((Collection)actual) &&
+                        ((Collection)actual).containsAll(expected);
+            }
+
+            @Override
+            public void describeTo(Description description)
+            {
+                description.appendText("equal, in some order, to").appendValue(expected);
+            }
+        };
     }
 }
