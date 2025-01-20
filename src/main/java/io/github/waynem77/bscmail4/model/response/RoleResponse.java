@@ -14,10 +14,10 @@ public class RoleResponse
     private String name;
 
     /**
-     * Creates a GetRoleResponse from the given Role.
+     * Creates a RoleResponse from the given Role.
      *
      * @param role the role
-     * @return a GetRoleResponse equivalent to role
+     * @return a RoleResponse equivalent to role
      */
     public static RoleResponse fromRole(@NonNull Role role)
     {
