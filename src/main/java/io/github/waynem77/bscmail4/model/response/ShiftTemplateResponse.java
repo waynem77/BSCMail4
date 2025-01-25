@@ -12,7 +12,7 @@ public class ShiftTemplateResponse
 {
     private Long id;
     private String name;
-    private Long requiredRoleId;
+    private Long requiredPermissionId;
 
     /**
      * Creates a ShiftTemplateResponse from the given ShiftTemplate.
@@ -25,7 +25,7 @@ public class ShiftTemplateResponse
         ShiftTemplateResponse response = new ShiftTemplateResponse();
         response.setId(shiftTemplate.getId());
         response.setName(shiftTemplate.getName());
-        response.setRequiredRoleId(shiftTemplate.getRequiredRoleId());
+        response.setRequiredPermissionId(shiftTemplate.getRequiredPermissionId());
 
         return response;
     }

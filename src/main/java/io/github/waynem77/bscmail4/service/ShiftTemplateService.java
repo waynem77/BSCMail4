@@ -2,9 +2,9 @@ package io.github.waynem77.bscmail4.service;
 
 import io.github.waynem77.bscmail4.exception.BadRequestException;
 import io.github.waynem77.bscmail4.exception.NotFoundException;
-import io.github.waynem77.bscmail4.model.entity.Role;
+import io.github.waynem77.bscmail4.model.entity.Permission;
 import io.github.waynem77.bscmail4.model.entity.ShiftTemplate;
-import io.github.waynem77.bscmail4.model.repository.RoleRepository;
+import io.github.waynem77.bscmail4.model.repository.PermissionRepository;
 import io.github.waynem77.bscmail4.model.repository.ShiftTemplateRepository;
 import io.github.waynem77.bscmail4.model.request.CreateOrUpdateShiftTemplateRequest;
 import io.github.waynem77.bscmail4.model.response.ShiftTemplateResponse;
@@ -31,7 +31,7 @@ public class ShiftTemplateService
     @Autowired
     private final ShiftTemplateRepository shiftTemplateRepository;
     @Autowired
-    private final RoleRepository roleRepository;
+    private final PermissionRepository permissionRepository;
 
     /**
      * Creates a new ShiftTemplate object from the given request and stores it in the database
@@ -47,7 +47,7 @@ public class ShiftTemplateService
 
         ShiftTemplate shiftTemplate = new ShiftTemplate();
         shiftTemplate.setName(request.getName());
-        shiftTemplate.setRequiredRole(getRoleOrThrow(request.getRequiredRoleId()));
+        shiftTemplate.setRequiredPermission(getPermissionOrThrow(request.getRequiredPermissionId()));
         shiftTemplate = shiftTemplateRepository.save(shiftTemplate);
 
         return createResponseFromShiftTemplate(shiftTemplate);
@@ -76,7 +76,7 @@ public class ShiftTemplateService
 
         ShiftTemplate shiftTemplate = possibleExistingShiftTemplate.get();
         shiftTemplate.setName(request.getName());
-        shiftTemplate.setRequiredRole(getRoleOrThrow(request.getRequiredRoleId()));
+        shiftTemplate.setRequiredPermission(getPermissionOrThrow(request.getRequiredPermissionId()));
         shiftTemplate = shiftTemplateRepository.save(shiftTemplate);
 
         return createResponseFromShiftTemplate(shiftTemplate);
@@ -159,26 +159,26 @@ public class ShiftTemplateService
         ShiftTemplateResponse response = new ShiftTemplateResponse();
         response.setId(shiftTemplate.getId());
         response.setName(shiftTemplate.getName());
-        response.setRequiredRoleId(shiftTemplate.getRequiredRoleId());
+        response.setRequiredPermissionId(shiftTemplate.getRequiredPermissionId());
 
         return response;
     }
 
     /**
-     * Returns the Role with the given id. If the Role does not exist in the database, this method throws a BadRequestException.
+     * Returns the Permission with the given id. If the Permission does not exist in the database, this method throws a BadRequestException.
      *
-     * @param roleId the requested Role id
-     * @return the Role with the given id
-     * @throws BadRequestException if the Role does not exist
+     * @param permissionId the requested Permission id
+     * @return the Permission with the given id
+     * @throws BadRequestException if the Permission does not exist
      */
-    private Role getRoleOrThrow(Long roleId)
+    private Permission getPermissionOrThrow(Long permissionId)
     {
-        if (roleId == null) {
+        if (permissionId == null) {
             return null;
         }
-        return roleRepository.findById(roleId).orElseThrow(() -> {
-            log.error("Role does not exist. id={}", roleId);
-            return new BadRequestException("Role does not exist.");
+        return permissionRepository.findById(permissionId).orElseThrow(() -> {
+            log.error("Permission does not exist. id={}", permissionId);
+            return new BadRequestException("Permission does not exist.");
         });
     }
 }

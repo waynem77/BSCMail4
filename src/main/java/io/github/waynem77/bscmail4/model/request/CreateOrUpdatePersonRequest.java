@@ -20,6 +20,6 @@ public class CreateOrUpdatePersonRequest
     private String name;
     private String emailAddress;
     private String phone;
-    private List<Long> roleIds;
+    private List<Long> permissionIds;
     private Boolean active;
 }

@@ -31,5 +31,5 @@ public class Person
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable
-    private Set<Role> roles;
+    private Set<Permission> permissions;
 }

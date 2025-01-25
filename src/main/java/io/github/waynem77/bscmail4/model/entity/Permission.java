@@ -4,12 +4,12 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 /**
- * A volunteer role.
+ * A volunteer permission.
  */
 @Entity
-@Table(name = "role")
+@Table(name = "permission")
 @Data
-public class Role
+public class Permission
 {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)

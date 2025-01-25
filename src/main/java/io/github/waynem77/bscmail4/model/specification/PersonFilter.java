@@ -1,7 +1,7 @@
 package io.github.waynem77.bscmail4.model.specification;
 
+import io.github.waynem77.bscmail4.model.entity.Permission;
 import io.github.waynem77.bscmail4.model.entity.Person;
-import io.github.waynem77.bscmail4.model.entity.Role;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Join;
@@ -29,13 +29,13 @@ import java.util.List;
  *     <dd>If not null, the filter will only select Person objects whose <code>name</code> property contains the
  *     given value, case-insensitive.</code></dd>
  *
- *     <dt>roleIds</dt>
- *     <dd>If not null, the filter will only select Person objects whose <code>roles</code> property contains
- *     <em>all</em> of the roles with the given ids.</dd>
+ *     <dt>permissionIds</dt>
+ *     <dd>If not null, the filter will only select Person objects whose <code>permissions</code> property contains
+ *     <em>all</em> of the permissions with the given ids.</dd>
  * </dl>
  * <p>
  * In the case where multiple properties have been set, the filter performs a Boolean AND operation. For example, if
- * active is set to true and roleIds is set to "marvin", the filter will select all Person objects whose active
+ * active is set to true and permissionIds is set to "marvin", the filter will select all Person objects whose active
  * property is true and whose names match the string "marvin".
  */
 @Data
@@ -46,25 +46,21 @@ public class PersonFilter
 {
     private Boolean active;
     private String nameLike;
-    private Collection<Long> roleIds;
+    private Collection<Long> permissionIds;
 
     public Specification<Person> toSpecification()
     {
         List<Specification<Person>> specifications = new ArrayList<>();
 
-        if (active != null)
-        {
+        if (active != null) {
             specifications.add(activeEqualTo(active));
         }
-        if (nameLike != null)
-        {
+        if (nameLike != null) {
             specifications.add(nameLike(nameLike));
         }
-        if (roleIds != null)
-        {
-            for (Long roleId : roleIds)
-            {
-                specifications.add(rolesContains(roleId));
+        if (permissionIds != null) {
+            for (Long permissionId : permissionIds) {
+                specifications.add(permissionsContains(permissionId));
             }
         }
 
@@ -83,12 +79,12 @@ public class PersonFilter
                 criteriaBuilder.like(criteriaBuilder.lower(root.get("name")), "%" + pattern.toLowerCase() + "%");
     }
 
-    private static Specification<Person> rolesContains(Long roleId)
+    private static Specification<Person> permissionsContains(Long permissionId)
     {
         return (Root<Person> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) ->
         {
-            Join<Role, Person> personRoles = root.join("roles");
-            return criteriaBuilder.equal(personRoles.get("id"), roleId);
+            Join<Permission, Person> personPermissions = root.join("permissions");
+            return criteriaBuilder.equal(personPermissions.get("id"), permissionId);
         };
     }
 }

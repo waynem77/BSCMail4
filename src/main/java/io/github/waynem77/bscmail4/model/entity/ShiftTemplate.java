@@ -20,13 +20,13 @@ public class ShiftTemplate
     private String name;
 
     @ManyToOne
-    @JoinColumn(name = "required_role_id")
-    private Role requiredRole;
+    @JoinColumn(name = "required_permission_id")
+    private Permission requiredPermission;
 
-    public Long getRequiredRoleId()
+    public Long getRequiredPermissionId()
     {
-        return requiredRole != null ?
-                requiredRole.getId() :
+        return requiredPermission != null ?
+                requiredPermission.getId() :
                 null;
     }
 }

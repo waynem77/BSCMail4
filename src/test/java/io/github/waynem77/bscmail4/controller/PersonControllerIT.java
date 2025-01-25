@@ -1,14 +1,14 @@
 package io.github.waynem77.bscmail4.controller;
 
 import io.github.waynem77.bscmail4.DbCleaner;
+import io.github.waynem77.bscmail4.model.entity.Permission;
 import io.github.waynem77.bscmail4.model.entity.Person;
-import io.github.waynem77.bscmail4.model.entity.Role;
+import io.github.waynem77.bscmail4.model.repository.PermissionRepository;
 import io.github.waynem77.bscmail4.model.repository.PersonRepository;
-import io.github.waynem77.bscmail4.model.repository.RoleRepository;
 import io.github.waynem77.bscmail4.model.request.CreateOrUpdatePersonRequest;
 import io.github.waynem77.bscmail4.model.response.PeopleResponse;
+import io.github.waynem77.bscmail4.model.response.PermissionResponse;
 import io.github.waynem77.bscmail4.model.response.PersonResponse;
-import io.github.waynem77.bscmail4.model.response.RoleResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,7 +46,7 @@ class PersonControllerIT
     private TestRestTemplate restTemplate;
 
     @Autowired
-    private RoleRepository roleRepository;
+    private PermissionRepository permissionRepository;
 
     @Autowired
     private PersonRepository personRepository;
@@ -56,17 +56,17 @@ class PersonControllerIT
 
     private DbCleaner dbCleaner;
 
-    private List<Role> roles;
+    private List<Permission> permissions;
 
     @BeforeEach
     public void setup()
     {
         dbCleaner = new DbCleaner(jdbcTemplate);
 
-        roles = List.of(
-                createRoleWithPrefix("a"),
-                createRoleWithPrefix("b"),
-                createRoleWithPrefix("c"));
+        permissions = List.of(
+                createPermissionWithPrefix("a"),
+                createPermissionWithPrefix("b"),
+                createPermissionWithPrefix("c"));
     }
 
     @AfterEach
@@ -78,19 +78,19 @@ class PersonControllerIT
     @Test
     public void getPeople_gets_all_people_by_default()
     {
-        List<Role> roles = List.of(
-                createRole(),
-                createRole(),
-                createRole()
+        List<Permission> permissions = List.of(
+                createPermission(),
+                createPermission(),
+                createPermission()
         );
         List<Person> people = List.of(
                 createPerson(randomString(), Collections.emptySet(), Boolean.TRUE),
-                createPerson(randomString(), Set.of(roles.get(0)), Boolean.FALSE),
-                createPerson(randomString(), Set.of(roles.get(2)), Boolean.TRUE),
-                createPerson(randomString(), Set.of(roles.get(0), roles.get(2)), Boolean.FALSE),
-                createPerson(randomString(), Set.of(roles.get(0), roles.get(1), roles.get(2)), Boolean.TRUE),
-                createPerson("Benjamin Franklin", Set.of(roles.get(0), roles.get(1), roles.get(2)), Boolean.FALSE),
-                createPerson("Franklin Roosevelt", Set.of(roles.get(0), roles.get(1), roles.get(2)), Boolean.TRUE));
+                createPerson(randomString(), Set.of(permissions.get(0)), Boolean.FALSE),
+                createPerson(randomString(), Set.of(permissions.get(2)), Boolean.TRUE),
+                createPerson(randomString(), Set.of(permissions.get(0), permissions.get(2)), Boolean.FALSE),
+                createPerson(randomString(), Set.of(permissions.get(0), permissions.get(1), permissions.get(2)), Boolean.TRUE),
+                createPerson("Benjamin Franklin", Set.of(permissions.get(0), permissions.get(1), permissions.get(2)), Boolean.FALSE),
+                createPerson("Franklin Roosevelt", Set.of(permissions.get(0), permissions.get(1), permissions.get(2)), Boolean.TRUE));
 
         ResponseEntity<PeopleResponse> responseEntity = restTemplate.getForEntity(
                 url("/api/person"),
@@ -120,19 +120,19 @@ class PersonControllerIT
     @Test
     public void getPeople_filters_correctly()
     {
-        List<Role> roles = List.of(
-                createRole(),
-                createRole(),
-                createRole()
+        List<Permission> permissions = List.of(
+                createPermission(),
+                createPermission(),
+                createPermission()
         );
         List<Person> people = List.of(
                 createPerson(randomString(), Collections.emptySet(), Boolean.TRUE),
-                createPerson(randomString(), Set.of(roles.get(0)), Boolean.FALSE),
-                createPerson(randomString(), Set.of(roles.get(2)), Boolean.TRUE),
-                createPerson(randomString(), Set.of(roles.get(0), roles.get(2)), Boolean.FALSE),
-                createPerson(randomString(), Set.of(roles.get(0), roles.get(1), roles.get(2)), Boolean.TRUE),
-                createPerson("Benjamin Franklin", Set.of(roles.get(0), roles.get(1), roles.get(2)), Boolean.FALSE),
-                createPerson("Franklin Roosevelt", Set.of(roles.get(0), roles.get(1), roles.get(2)), Boolean.TRUE));
+                createPerson(randomString(), Set.of(permissions.get(0)), Boolean.FALSE),
+                createPerson(randomString(), Set.of(permissions.get(2)), Boolean.TRUE),
+                createPerson(randomString(), Set.of(permissions.get(0), permissions.get(2)), Boolean.FALSE),
+                createPerson(randomString(), Set.of(permissions.get(0), permissions.get(1), permissions.get(2)), Boolean.TRUE),
+                createPerson("Benjamin Franklin", Set.of(permissions.get(0), permissions.get(1), permissions.get(2)), Boolean.FALSE),
+                createPerson("Franklin Roosevelt", Set.of(permissions.get(0), permissions.get(1), permissions.get(2)), Boolean.TRUE));
 
         ResponseEntity<PeopleResponse> responseEntityFilteringActive = restTemplate.getForEntity(
                 url("/api/person?active=true"),
@@ -174,34 +174,34 @@ class PersonControllerIT
                 getPersonResponseFromPerson(people.get(5)),
                 getPersonResponseFromPerson(people.get(6)))));
 
-        ResponseEntity<PeopleResponse> responseEntityFilteringRoles = restTemplate.getForEntity(
-                url("/api/person?roleIds={roleId0},{roleId2}"),
+        ResponseEntity<PeopleResponse> responseEntityFilteringPermissions = restTemplate.getForEntity(
+                url("/api/person?permissionIds={permissionId0},{permissionId2}"),
                 PeopleResponse.class,
-                roles.get(0).getId(),
-                roles.get(2).getId());
+                permissions.get(0).getId(),
+                permissions.get(2).getId());
 
-        assertThat(responseEntityFilteringRoles, notNullValue());
-        assertThat(responseEntityFilteringRoles.getStatusCode().is2xxSuccessful(), equalTo(true));
+        assertThat(responseEntityFilteringPermissions, notNullValue());
+        assertThat(responseEntityFilteringPermissions.getStatusCode().is2xxSuccessful(), equalTo(true));
 
-        PeopleResponse responseFilteringRoles = responseEntityFilteringRoles.getBody();
-        assertThat(responseFilteringRoles, notNullValue());
-        assertThat(responseFilteringRoles.getPageInfo(), notNullValue());
-        assertThat(responseFilteringRoles.getPageInfo().getNumber(), equalTo(0));
-        assertThat(responseFilteringRoles.getPageInfo().getSize(), equalTo(25));
-        assertThat(responseFilteringRoles.getPageInfo().getTotalElements(), equalTo(4L));
-        assertThat(responseFilteringRoles.getPageInfo().isFirst(), equalTo(true));
-        assertThat(responseFilteringRoles.getPageInfo().isLast(), equalTo(true));
-        assertThat(responseFilteringRoles.getContent(), equalToUnordered(List.of(
+        PeopleResponse responseFilteringPermissions = responseEntityFilteringPermissions.getBody();
+        assertThat(responseFilteringPermissions, notNullValue());
+        assertThat(responseFilteringPermissions.getPageInfo(), notNullValue());
+        assertThat(responseFilteringPermissions.getPageInfo().getNumber(), equalTo(0));
+        assertThat(responseFilteringPermissions.getPageInfo().getSize(), equalTo(25));
+        assertThat(responseFilteringPermissions.getPageInfo().getTotalElements(), equalTo(4L));
+        assertThat(responseFilteringPermissions.getPageInfo().isFirst(), equalTo(true));
+        assertThat(responseFilteringPermissions.getPageInfo().isLast(), equalTo(true));
+        assertThat(responseFilteringPermissions.getContent(), equalToUnordered(List.of(
                 getPersonResponseFromPerson(people.get(3)),
                 getPersonResponseFromPerson(people.get(4)),
                 getPersonResponseFromPerson(people.get(5)),
                 getPersonResponseFromPerson(people.get(6)))));
 
         ResponseEntity<PeopleResponse> responseEntityFilteringMultiple = restTemplate.getForEntity(
-                url("/api/person?active=true&like=ran&?roleIds={roleId0},{roleId2}"),
+                url("/api/person?active=true&like=ran&?permissionIds={permissionId0},{permissionId2}"),
                 PeopleResponse.class,
-                roles.get(0).getId(),
-                roles.get(2).getId());
+                permissions.get(0).getId(),
+                permissions.get(2).getId());
 
         assertThat(responseEntityFilteringMultiple, notNullValue());
         assertThat(responseEntityFilteringMultiple.getStatusCode().is2xxSuccessful(), equalTo(true));
@@ -221,17 +221,17 @@ class PersonControllerIT
     @Test
     public void getPeople_sorts_by_name_ascending()
     {
-        List<Role> roles = List.of(
-                createRole(),
-                createRole(),
-                createRole()
+        List<Permission> permissions = List.of(
+                createPermission(),
+                createPermission(),
+                createPermission()
         );
         List<Person> people = List.of(
                 createPerson(randomStringWithPrefix("a"), Collections.emptySet(), Boolean.TRUE),
-                createPerson(randomStringWithPrefix("d"), Set.of(roles.get(0)), Boolean.FALSE),
-                createPerson(randomStringWithPrefix("c"), Set.of(roles.get(1)), Boolean.TRUE),
-                createPerson(randomStringWithPrefix("b"), Set.of(roles.get(0), roles.get(2)), Boolean.FALSE),
-                createPerson(randomStringWithPrefix("e"), Set.of(roles.get(0), roles.get(1), roles.get(2)),
+                createPerson(randomStringWithPrefix("d"), Set.of(permissions.get(0)), Boolean.FALSE),
+                createPerson(randomStringWithPrefix("c"), Set.of(permissions.get(1)), Boolean.TRUE),
+                createPerson(randomStringWithPrefix("b"), Set.of(permissions.get(0), permissions.get(2)), Boolean.FALSE),
+                createPerson(randomStringWithPrefix("e"), Set.of(permissions.get(0), permissions.get(1), permissions.get(2)),
                         Boolean.TRUE));
 
         ResponseEntity<PeopleResponse> responseEntity = restTemplate.getForEntity(
@@ -260,17 +260,17 @@ class PersonControllerIT
     @Test
     public void getPeople_pages_correctly()
     {
-        List<Role> roles = List.of(
-                createRole(),
-                createRole(),
-                createRole()
+        List<Permission> permissions = List.of(
+                createPermission(),
+                createPermission(),
+                createPermission()
         );
         List<Person> people = List.of(
                 createPerson(randomStringWithPrefix("a"), Collections.emptySet(), Boolean.TRUE),
-                createPerson(randomStringWithPrefix("d"), Set.of(roles.get(0)), Boolean.FALSE),
-                createPerson(randomStringWithPrefix("c"), Set.of(roles.get(1)), Boolean.TRUE),
-                createPerson(randomStringWithPrefix("b"), Set.of(roles.get(0), roles.get(2)), Boolean.FALSE),
-                createPerson(randomStringWithPrefix("e"), Set.of(roles.get(0), roles.get(1), roles.get(2)),
+                createPerson(randomStringWithPrefix("d"), Set.of(permissions.get(0)), Boolean.FALSE),
+                createPerson(randomStringWithPrefix("c"), Set.of(permissions.get(1)), Boolean.TRUE),
+                createPerson(randomStringWithPrefix("b"), Set.of(permissions.get(0), permissions.get(2)), Boolean.FALSE),
+                createPerson(randomStringWithPrefix("e"), Set.of(permissions.get(0), permissions.get(1), permissions.get(2)),
                         Boolean.TRUE));
 
         ResponseEntity<PeopleResponse> page0ResponseEntity = restTemplate.getForEntity(
@@ -337,9 +337,9 @@ class PersonControllerIT
         request.setName(randomString());
         request.setEmailAddress(randomString());
         request.setPhone(randomString());
-        request.setRoleIds(List.of(
-                roles.get(0).getId(),
-                roles.get(1).getId()));
+        request.setPermissionIds(List.of(
+                permissions.get(0).getId(),
+                permissions.get(1).getId()));
         request.setActive(randomBoolean());
 
         ResponseEntity<PersonResponse> responseEntity = restTemplate.postForEntity(
@@ -357,8 +357,8 @@ class PersonControllerIT
         assertThat(personResponse.getName(), equalTo(request.getName()));
         assertThat(personResponse.getEmailAddress(), equalTo(request.getEmailAddress()));
         assertThat(
-                personResponse.getRoles(),
-                equalTo(Stream.of(roles.get(0), roles.get(1)).map(RoleResponse::fromRole).toList()));
+                personResponse.getPermissions(),
+                equalTo(Stream.of(permissions.get(0), permissions.get(1)).map(PermissionResponse::fromPermission).toList()));
         assertThat(personResponse.getActive(), equalTo(request.getActive()));
 
         Optional<Person> person = personRepository.findById(personResponse.getId());
@@ -366,18 +366,18 @@ class PersonControllerIT
         assertThat(person.get().getName(), equalTo(request.getName()));
         assertThat(person.get().getEmailAddress(), equalTo(request.getEmailAddress()));
         assertThat(person.get().getPhone(), equalTo(request.getPhone()));
-        assertThat(person.get().getRoles(), equalTo(Set.of(roles.get(0), roles.get(1))));
+        assertThat(person.get().getPermissions(), equalTo(Set.of(permissions.get(0), permissions.get(1))));
         assertThat(person.get().getActive(), equalTo(request.getActive()));
     }
 
     @Test
-    public void createPersonWithoutRolesCreatesAPerson()
+    public void createPersonWithoutPermissionsCreatesAPerson()
     {
         CreateOrUpdatePersonRequest request = new CreateOrUpdatePersonRequest();
         request.setName(randomString());
         request.setEmailAddress(randomString());
         request.setPhone(randomString());
-        request.setRoleIds(null);
+        request.setPermissionIds(null);
         request.setActive(randomBoolean());
 
         ResponseEntity<PersonResponse> responseEntity = restTemplate.postForEntity(
@@ -395,7 +395,7 @@ class PersonControllerIT
         assertThat(personResponse.getName(), equalTo(request.getName()));
         assertThat(personResponse.getEmailAddress(), equalTo(request.getEmailAddress()));
         assertThat(personResponse.getPhone(), equalTo(request.getPhone()));
-        assertThat(personResponse.getRoles(), equalTo(Collections.emptyList()));
+        assertThat(personResponse.getPermissions(), equalTo(Collections.emptyList()));
         assertThat(personResponse.getActive(), equalTo(request.getActive()));
     }
 
@@ -422,9 +422,9 @@ class PersonControllerIT
         request.setName(randomString());
         request.setEmailAddress(randomString());
         request.setPhone(randomString());
-        request.setRoleIds(List.of(
-                roles.get(0).getId(),
-                roles.get(1).getId()));
+        request.setPermissionIds(List.of(
+                permissions.get(0).getId(),
+                permissions.get(1).getId()));
         request.setActive(!originalPerson.getActive());
 
         HttpEntity<CreateOrUpdatePersonRequest> httpEntity = new HttpEntity<>(request);
@@ -444,8 +444,8 @@ class PersonControllerIT
         assertThat(personResponse.getName(), equalTo(request.getName()));
         assertThat(personResponse.getEmailAddress(), equalTo(request.getEmailAddress()));
         assertThat(
-                personResponse.getRoles(),
-                equalTo(Stream.of(roles.get(0), roles.get(1)).map(RoleResponse::fromRole).toList()));
+                personResponse.getPermissions(),
+                equalTo(Stream.of(permissions.get(0), permissions.get(1)).map(PermissionResponse::fromPermission).toList()));
         assertThat(personResponse.getActive(), equalTo(request.getActive()));
 
         Optional<Person> person = personRepository.findById(personId);
@@ -453,7 +453,7 @@ class PersonControllerIT
         assertThat(person.get().getName(), equalTo(request.getName()));
         assertThat(person.get().getEmailAddress(), equalTo(request.getEmailAddress()));
         assertThat(person.get().getPhone(), equalTo(request.getPhone()));
-        assertThat(person.get().getRoles(), equalTo(Set.of(roles.get(0), roles.get(1))));
+        assertThat(person.get().getPermissions(), equalTo(Set.of(permissions.get(0), permissions.get(1))));
         assertThat(person.get().getActive(), equalTo(request.getActive()));
     }
 
@@ -466,9 +466,9 @@ class PersonControllerIT
         request.setName(randomString());
         request.setEmailAddress(randomString());
         request.setPhone(randomString());
-        request.setRoleIds(List.of(
-                roles.get(0).getId(),
-                roles.get(1).getId()));
+        request.setPermissionIds(List.of(
+                permissions.get(0).getId(),
+                permissions.get(1).getId()));
         request.setActive(randomBoolean());
 
         HttpEntity<CreateOrUpdatePersonRequest> httpEntity = new HttpEntity<>(request);
@@ -489,8 +489,8 @@ class PersonControllerIT
         assertThat(personResponse.getName(), equalTo(request.getName()));
         assertThat(personResponse.getEmailAddress(), equalTo(request.getEmailAddress()));
         assertThat(
-                personResponse.getRoles(),
-                equalTo(Stream.of(roles.get(0), roles.get(1)).map(RoleResponse::fromRole).toList()));
+                personResponse.getPermissions(),
+                equalTo(Stream.of(permissions.get(0), permissions.get(1)).map(PermissionResponse::fromPermission).toList()));
         assertThat(personResponse.getActive(), equalTo(request.getActive()));
 
         Optional<Person> person = personRepository.findById(personResponse.getId());
@@ -498,7 +498,7 @@ class PersonControllerIT
         assertThat(person.get().getName(), equalTo(request.getName()));
         assertThat(person.get().getEmailAddress(), equalTo(request.getEmailAddress()));
         assertThat(person.get().getPhone(), equalTo(request.getPhone()));
-        assertThat(person.get().getRoles(), equalTo(Set.of(roles.get(0), roles.get(1))));
+        assertThat(person.get().getPermissions(), equalTo(Set.of(permissions.get(0), permissions.get(1))));
         assertThat(person.get().getActive(), equalTo(request.getActive()));
     }
 
@@ -636,41 +636,41 @@ class PersonControllerIT
         dbCleaner.addCleanup(table, id);
     }
 
-    private Role createRole()
+    private Permission createPermission()
     {
-        return createRole(randomString());
+        return createPermission(randomString());
     }
 
-    private Role createRole(String name)
+    private Permission createPermission(String name)
     {
-        Role role = new Role();
-        role.setName(name);
-        role = roleRepository.save(role);
-        addDbCleanup("role", role.getId());
+        Permission permission = new Permission();
+        permission.setName(name);
+        permission = permissionRepository.save(permission);
+        addDbCleanup("permission", permission.getId());
 
-        return role;
+        return permission;
     }
 
-    private Role createRoleWithPrefix(String prefix)
+    private Permission createPermissionWithPrefix(String prefix)
     {
-        return createRole(randomStringWithPrefix(prefix));
+        return createPermission(randomStringWithPrefix(prefix));
     }
 
     private Person createPerson()
     {
         return createPerson(
                 randomString(),
-                roles.stream().filter(role -> randomBoolean()).collect(Collectors.toSet()),
+                permissions.stream().filter(permission -> randomBoolean()).collect(Collectors.toSet()),
                 randomBoolean());
     }
 
-    private Person createPerson(String name, Set<Role> roles, Boolean active)
+    private Person createPerson(String name, Set<Permission> permissions, Boolean active)
     {
         Person person = new Person();
         person.setName(name);
         person.setEmailAddress(randomString());
         person.setPhone(randomString());
-        person.setRoles(roles);
+        person.setPermissions(permissions);
         person.setActive(active);
         person = personRepository.save(person);
         addDbCleanup("person", person.getId());
@@ -678,11 +678,11 @@ class PersonControllerIT
         return person;
     }
 
-    private RoleResponse getRoleResponseFromRole(Role role)
+    private PermissionResponse getPermissionResponseFromPermission(Permission permission)
     {
-        RoleResponse response = new RoleResponse();
-        response.setId(role.getId());
-        response.setName(role.getName());
+        PermissionResponse response = new PermissionResponse();
+        response.setId(permission.getId());
+        response.setName(permission.getName());
 
         return response;
     }
@@ -694,10 +694,10 @@ class PersonControllerIT
         response.setName(person.getName());
         response.setEmailAddress(person.getEmailAddress());
         response.setPhone(person.getPhone());
-        response.setRoles((person.getRoles() != null ? person.getRoles() : Collections.<Role>emptySet())
+        response.setPermissions((person.getPermissions() != null ? person.getPermissions() : Collections.<Permission>emptySet())
                 .stream()
-                .map(this::getRoleResponseFromRole)
-                .sorted(Comparator.comparing(RoleResponse::getName))
+                .map(this::getPermissionResponseFromPermission)
+                .sorted(Comparator.comparing(PermissionResponse::getName))
                 .toList());
         response.setActive(person.getActive());
 
@@ -706,8 +706,7 @@ class PersonControllerIT
 
     private void validatePersonResponse(PersonResponse response, Person person)
     {
-        if (person == null)
-        {
+        if (person == null) {
             assertThat(response, nullValue());
             return;
         }
@@ -719,16 +718,16 @@ class PersonControllerIT
         assertThat(response.getPhone(), equalTo(person.getPhone()));
         assertThat(response.getActive(), equalTo(person.getActive()));
 
-        Set<RoleResponse> expectedRoleResponses = (person.getRoles() != null ? person.getRoles().stream() :
-                Stream.<Role>empty())
-                .map(role ->
+        Set<PermissionResponse> expectedPermissionRespons = (person.getPermissions() != null ? person.getPermissions().stream() :
+                Stream.<Permission>empty())
+                .map(permission ->
                 {
-                    RoleResponse roleResponse = new RoleResponse();
-                    roleResponse.setId(role.getId());
-                    roleResponse.setName(role.getName());
-                    return roleResponse;
+                    PermissionResponse permissionResponse = new PermissionResponse();
+                    permissionResponse.setId(permission.getId());
+                    permissionResponse.setName(permission.getName());
+                    return permissionResponse;
                 })
                 .collect(Collectors.toSet());
-        assertThat(response.getRoles(), equalToUnordered(expectedRoleResponses));
+        assertThat(response.getPermissions(), equalToUnordered(expectedPermissionRespons));
     }
 }

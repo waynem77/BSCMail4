@@ -28,14 +28,14 @@ class ShiftTemplateResponseTest
         ShiftTemplate shiftTemplate = mock(ShiftTemplate.class);
         given(shiftTemplate.getId()).willReturn(randomLong());
         given(shiftTemplate.getName()).willReturn(randomString());
-        given(shiftTemplate.getRequiredRoleId()).willReturn(randomLong());
+        given(shiftTemplate.getRequiredPermissionId()).willReturn(randomLong());
 
         ShiftTemplateResponse shiftTemplateResponse = ShiftTemplateResponse.fromShiftTemplate(shiftTemplate);
 
         assertThat(shiftTemplateResponse, notNullValue());
         assertThat(shiftTemplateResponse.getId(), equalTo(shiftTemplate.getId()));
         assertThat(shiftTemplateResponse.getName(), equalTo(shiftTemplate.getName()));
-        assertThat(shiftTemplateResponse.getRequiredRoleId(), equalTo(shiftTemplate.getRequiredRoleId()));
+        assertThat(shiftTemplateResponse.getRequiredPermissionId(), equalTo(shiftTemplate.getRequiredPermissionId()));
     }
 
 }

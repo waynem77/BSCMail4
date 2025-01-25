@@ -6,14 +6,14 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.domain.Page;
 
 /**
- * A wrapper for a Spring Page of {@link RoleResponse}s.
+ * A wrapper for a Spring Page of {@link PermissionResponse}s.
  */
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class RolesResponse extends ResponsePage<RoleResponse>
+public class PermissionsResponse extends ResponsePage<PermissionResponse>
 {
-    public RolesResponse(Page<RoleResponse> page)
+    public PermissionsResponse(Page<PermissionResponse> page)
     {
         super(page);
     }

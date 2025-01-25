@@ -3,12 +3,12 @@ package io.github.waynem77.bscmail4.service;
 import io.github.waynem77.bscmail4.exception.BadRequestException;
 import io.github.waynem77.bscmail4.exception.NotFoundException;
 import io.github.waynem77.bscmail4.model.entity.Person;
+import io.github.waynem77.bscmail4.model.repository.PermissionRepository;
 import io.github.waynem77.bscmail4.model.repository.PersonRepository;
-import io.github.waynem77.bscmail4.model.repository.RoleRepository;
 import io.github.waynem77.bscmail4.model.request.CreateOrUpdatePersonRequest;
 import io.github.waynem77.bscmail4.model.response.PeopleResponse;
+import io.github.waynem77.bscmail4.model.response.PermissionResponse;
 import io.github.waynem77.bscmail4.model.response.PersonResponse;
-import io.github.waynem77.bscmail4.model.response.RoleResponse;
 import io.github.waynem77.bscmail4.model.specification.PersonFilter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +34,7 @@ public class PersonService
     @Autowired
     private final PersonRepository personRepository;
     @Autowired
-    private final RoleRepository roleRepository;
+    private final PermissionRepository permissionRepository;
 
     /**
      * Returns all Person objects matching the given filter, in ascending order by name, by page.
@@ -70,7 +70,7 @@ public class PersonService
         person.setName(request.getName());
         person.setEmailAddress(request.getEmailAddress());
         person.setPhone(request.getPhone());
-        person.setRoles(roleRepository.findAllByIdIn(request.getRoleIds()));
+        person.setPermissions(permissionRepository.findAllByIdIn(request.getPermissionIds()));
         person.setActive(request.getActive());
         person = personRepository.save(person);
 
@@ -92,8 +92,7 @@ public class PersonService
 
         Optional<Person> possibleExistingPerson = personRepository.findById(id);
 
-        if (possibleExistingPerson.isEmpty())
-        {
+        if (possibleExistingPerson.isEmpty()) {
             log.info("Person with id={} does not exist.", id);
             return createPerson(request);
         }
@@ -104,7 +103,7 @@ public class PersonService
         person.setName(request.getName());
         person.setEmailAddress(request.getEmailAddress());
         person.setPhone(request.getPhone());
-        person.setRoles(roleRepository.findAllByIdIn(request.getRoleIds()));
+        person.setPermissions(permissionRepository.findAllByIdIn(request.getPermissionIds()));
         person.setActive(request.getActive());
         person = personRepository.save(person);
 
@@ -133,8 +132,7 @@ public class PersonService
     private void validateRequestForCreate(CreateOrUpdatePersonRequest request)
     {
         log.info("Validating request for create. request={}", request);
-        if (request.getName() == null || request.getEmailAddress() == null || request.getActive() == null)
-        {
+        if (request.getName() == null || request.getEmailAddress() == null || request.getActive() == null) {
             log.error("Invalid request. Request name, email address, and active must all be non-null. request={}",
                     request);
             throw new BadRequestException("Invalid request");
@@ -172,7 +170,7 @@ public class PersonService
         response.setName(person.getName());
         response.setEmailAddress(person.getEmailAddress());
         response.setPhone(person.getPhone());
-        response.setRoles(person.getRoles().stream().map(RoleResponse::fromRole).sorted(Comparator.comparing(RoleResponse::getName)).toList());
+        response.setPermissions(person.getPermissions().stream().map(PermissionResponse::fromPermission).sorted(Comparator.comparing(PermissionResponse::getName)).toList());
         response.setActive(person.getActive());
 
         return response;

@@ -2,9 +2,9 @@ package io.github.waynem77.bscmail4.service;
 
 import io.github.waynem77.bscmail4.exception.BadRequestException;
 import io.github.waynem77.bscmail4.exception.NotFoundException;
-import io.github.waynem77.bscmail4.model.entity.Role;
+import io.github.waynem77.bscmail4.model.entity.Permission;
 import io.github.waynem77.bscmail4.model.entity.ShiftTemplate;
-import io.github.waynem77.bscmail4.model.repository.RoleRepository;
+import io.github.waynem77.bscmail4.model.repository.PermissionRepository;
 import io.github.waynem77.bscmail4.model.repository.ShiftTemplateRepository;
 import io.github.waynem77.bscmail4.model.request.CreateOrUpdateShiftTemplateRequest;
 import io.github.waynem77.bscmail4.model.response.ShiftTemplateResponse;
@@ -38,7 +38,7 @@ import static org.mockito.Mockito.*;
 class ShiftTemplateServiceTest
 {
     private ShiftTemplateRepository shiftTemplateRepository;
-    private RoleRepository roleRepository;
+    private PermissionRepository permissionRepository;
 
     private ShiftTemplate shiftTemplate;
     private CreateOrUpdateShiftTemplateRequest request;
@@ -48,7 +48,7 @@ class ShiftTemplateServiceTest
     public void setup()
     {
         shiftTemplateRepository = mock(ShiftTemplateRepository.class);
-        roleRepository = mock(RoleRepository.class);
+        permissionRepository = mock(PermissionRepository.class);
 
         resetShiftTemplateAndRequest();
     }
@@ -185,27 +185,27 @@ class ShiftTemplateServiceTest
 
     private void resetShiftTemplateAndRequest()
     {
-        Long roleId = randomLong();
-        String roleName = randomString();
-        Role role = mock(Role.class);
-        given(role.getId()).willReturn(roleId);
-        given(role.getName()).willReturn(roleName);
+        Long permissionId = randomLong();
+        String permissionName = randomString();
+        Permission permission = mock(Permission.class);
+        given(permission.getId()).willReturn(permissionId);
+        given(permission.getName()).willReturn(permissionName);
 
-        given(roleRepository.findById(roleId)).willReturn(Optional.of(role));
+        given(permissionRepository.findById(permissionId)).willReturn(Optional.of(permission));
 
         Long shiftTemplateId = randomLong();
         String shiftTemplateName = randomString();
         shiftTemplate = mock(ShiftTemplate.class);
         given(shiftTemplate.getId()).willReturn(shiftTemplateId);
         given(shiftTemplate.getName()).willReturn(shiftTemplateName);
-        given(shiftTemplate.getRequiredRole()).willReturn(role);
-        given(shiftTemplate.getRequiredRoleId()).willReturn(roleId);
+        given(shiftTemplate.getRequiredPermission()).willReturn(permission);
+        given(shiftTemplate.getRequiredPermissionId()).willReturn(permissionId);
 
         given(shiftTemplateRepository.save(any())).willReturn(shiftTemplate);
 
         request = mock(CreateOrUpdateShiftTemplateRequest.class);
         given(request.getName()).willReturn(shiftTemplateName);
-        given(request.getRequiredRoleId()).willReturn(roleId);
+        given(request.getRequiredPermissionId()).willReturn(permissionId);
     }
 
     private void validateShiftTemplateFromRequest(ShiftTemplate shiftTemplate, CreateOrUpdateShiftTemplateRequest request)
@@ -217,11 +217,11 @@ class ShiftTemplateServiceTest
 
         assertThat(shiftTemplate, notNullValue());
         assertThat(shiftTemplate.getName(), equalTo(request.getName()));
-        if (request.getRequiredRoleId() == null) {
-            assertThat(shiftTemplate.getRequiredRole(), nullValue());
+        if (request.getRequiredPermissionId() == null) {
+            assertThat(shiftTemplate.getRequiredPermission(), nullValue());
         } else {
-            assertThat(shiftTemplate.getRequiredRole(), notNullValue());
-            assertThat(shiftTemplate.getRequiredRole().getId(), equalTo(request.getRequiredRoleId()));
+            assertThat(shiftTemplate.getRequiredPermission(), notNullValue());
+            assertThat(shiftTemplate.getRequiredPermission().getId(), equalTo(request.getRequiredPermissionId()));
         }
     }
 
@@ -235,7 +235,7 @@ class ShiftTemplateServiceTest
         assertThat(response, notNullValue());
         assertThat(response.getId(), notNullValue());
         assertThat(response.getName(), equalTo(request.getName()));
-        assertThat(response.getRequiredRoleId(), equalTo(request.getRequiredRoleId()));
+        assertThat(response.getRequiredPermissionId(), equalTo(request.getRequiredPermissionId()));
     }
 
     private ShiftTemplate randomShiftTemplate()
@@ -251,6 +251,6 @@ class ShiftTemplateServiceTest
     {
         return new ShiftTemplateService(
                 shiftTemplateRepository,
-                roleRepository);
+                permissionRepository);
     }
 }

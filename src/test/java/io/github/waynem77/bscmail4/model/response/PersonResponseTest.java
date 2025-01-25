@@ -1,7 +1,7 @@
 package io.github.waynem77.bscmail4.model.response;
 
+import io.github.waynem77.bscmail4.model.entity.Permission;
 import io.github.waynem77.bscmail4.model.entity.Person;
-import io.github.waynem77.bscmail4.model.entity.Role;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -30,25 +30,25 @@ class PersonResponseTest
     }
 
     @Test
-    public void fromRoleReturnsCorrectValue()
+    public void fromPermissionReturnsCorrectValue()
     {
-        List<Role> roles = List.of(
-                mock(Role.class),
-                mock(Role.class),
-                mock(Role.class));
-        given(roles.get(0).getId()).willReturn(randomLong());
-        given(roles.get(0).getName()).willReturn(randomStringWithPrefix("a"));
-        given(roles.get(1).getId()).willReturn(randomLong());
-        given(roles.get(1).getName()).willReturn(randomStringWithPrefix("b"));
-        given(roles.get(2).getId()).willReturn(randomLong());
-        given(roles.get(2).getName()).willReturn(randomStringWithPrefix("c"));
+        List<Permission> permissions = List.of(
+                mock(Permission.class),
+                mock(Permission.class),
+                mock(Permission.class));
+        given(permissions.get(0).getId()).willReturn(randomLong());
+        given(permissions.get(0).getName()).willReturn(randomStringWithPrefix("a"));
+        given(permissions.get(1).getId()).willReturn(randomLong());
+        given(permissions.get(1).getName()).willReturn(randomStringWithPrefix("b"));
+        given(permissions.get(2).getId()).willReturn(randomLong());
+        given(permissions.get(2).getName()).willReturn(randomStringWithPrefix("c"));
 
         Person person = mock(Person.class);
         given(person.getId()).willReturn(randomLong());
         given(person.getName()).willReturn(randomString());
         given(person.getEmailAddress()).willReturn(randomString());
         given(person.getPhone()).willReturn(randomString());
-        given(person.getRoles()).willReturn(new HashSet<>(roles));
+        given(person.getPermissions()).willReturn(new HashSet<>(permissions));
         given(person.getActive()).willReturn(randomBoolean());
 
         PersonResponse personResponse = PersonResponse.fromPerson(person);
@@ -60,27 +60,27 @@ class PersonResponseTest
         assertThat(personResponse.getPhone(), equalTo(person.getPhone()));
         assertThat(personResponse.getActive(), equalTo(person.getActive()));
 
-        List<RoleResponse> expectedRoleResponses = roles.stream()
-                .map(role ->
+        List<PermissionResponse> expectedPermissionRespons = permissions.stream()
+                .map(permission ->
                 {
-                    RoleResponse roleResponse = new RoleResponse();
-                    roleResponse.setId(role.getId());
-                    roleResponse.setName(role.getName());
-                    return roleResponse;
+                    PermissionResponse permissionResponse = new PermissionResponse();
+                    permissionResponse.setId(permission.getId());
+                    permissionResponse.setName(permission.getName());
+                    return permissionResponse;
                 })
                 .toList();
-        assertThat(personResponse.getRoles(), equalTo(expectedRoleResponses));
+        assertThat(personResponse.getPermissions(), equalTo(expectedPermissionRespons));
     }
 
     @Test
-    public void fromRoleReturnsCorrectValueWhenRolesIsNull()
+    public void fromPermissionReturnsCorrectValueWhenPermissionsIsNull()
     {
         Person person = mock(Person.class);
         given(person.getId()).willReturn(randomLong());
         given(person.getName()).willReturn(randomString());
         given(person.getEmailAddress()).willReturn(randomString());
         given(person.getPhone()).willReturn(randomString());
-        given(person.getRoles()).willReturn(null);
+        given(person.getPermissions()).willReturn(null);
         given(person.getActive()).willReturn(randomBoolean());
 
         PersonResponse personResponse = PersonResponse.fromPerson(person);
@@ -90,7 +90,7 @@ class PersonResponseTest
         assertThat(personResponse.getName(), equalTo(person.getName()));
         assertThat(personResponse.getEmailAddress(), equalTo(person.getEmailAddress()));
         assertThat(personResponse.getPhone(), equalTo(person.getPhone()));
-        assertThat(personResponse.getRoles(), equalTo(Collections.emptyList()));
+        assertThat(personResponse.getPermissions(), equalTo(Collections.emptyList()));
         assertThat(personResponse.getActive(), equalTo(person.getActive()));
     }
 }

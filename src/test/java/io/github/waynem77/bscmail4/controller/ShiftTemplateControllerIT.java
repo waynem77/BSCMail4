@@ -1,9 +1,9 @@
 package io.github.waynem77.bscmail4.controller;
 
 import io.github.waynem77.bscmail4.DbCleaner;
-import io.github.waynem77.bscmail4.model.entity.Role;
+import io.github.waynem77.bscmail4.model.entity.Permission;
 import io.github.waynem77.bscmail4.model.entity.ShiftTemplate;
-import io.github.waynem77.bscmail4.model.repository.RoleRepository;
+import io.github.waynem77.bscmail4.model.repository.PermissionRepository;
 import io.github.waynem77.bscmail4.model.repository.ShiftTemplateRepository;
 import io.github.waynem77.bscmail4.model.request.CreateOrUpdateShiftTemplateRequest;
 import io.github.waynem77.bscmail4.model.response.ShiftTemplateResponse;
@@ -44,7 +44,7 @@ class ShiftTemplateControllerIT
     JdbcTemplate jdbcTemplate;
 
     @Autowired
-    RoleRepository roleRepository;
+    PermissionRepository permissionRepository;
 
     @Autowired
     ShiftTemplateRepository shiftTemplateRepository;
@@ -66,11 +66,11 @@ class ShiftTemplateControllerIT
     @Test
     public void createShiftTemplateCreatesAShiftTemplate()
     {
-        Role role = createRole();
+        Permission permission = createPermission();
 
         CreateOrUpdateShiftTemplateRequest request = new CreateOrUpdateShiftTemplateRequest();
         request.setName(randomString());
-        request.setRequiredRoleId(role.getId());
+        request.setRequiredPermissionId(permission.getId());
 
         ResponseEntity<ShiftTemplateResponse> responseEntity = restTemplate.postForEntity(
                 url("/api/shift/template"),
@@ -85,16 +85,16 @@ class ShiftTemplateControllerIT
         assertThat(response.getId(), notNullValue());
         addDbCleanup("shift_template", response.getId());
         assertThat(response.getName(), equalTo(request.getName()));
-        assertThat(response.getRequiredRoleId(), equalTo(request.getRequiredRoleId()));
+        assertThat(response.getRequiredPermissionId(), equalTo(request.getRequiredPermissionId()));
 
         Optional<ShiftTemplate> shiftTemplate = shiftTemplateRepository.findById(response.getId());
         assertThat(shiftTemplate.isPresent(), equalTo(true));
         assertThat(shiftTemplate.get().getName(), equalTo(request.getName()));
-        assertThat(shiftTemplate.get().getRequiredRole(), equalTo(role));
+        assertThat(shiftTemplate.get().getRequiredPermission(), equalTo(permission));
     }
 
     @Test
-    public void createShiftTemplateWithoutRoleCreatesAShiftTemplate()
+    public void createShiftTemplateWithoutPermissionCreatesAShiftTemplate()
     {
         CreateOrUpdateShiftTemplateRequest request = new CreateOrUpdateShiftTemplateRequest();
         request.setName(randomString());
@@ -112,12 +112,12 @@ class ShiftTemplateControllerIT
         assertThat(response.getId(), notNullValue());
         addDbCleanup("shift_template", response.getId());
         assertThat(response.getName(), equalTo(request.getName()));
-        assertThat(response.getRequiredRoleId(), nullValue());
+        assertThat(response.getRequiredPermissionId(), nullValue());
 
         Optional<ShiftTemplate> shiftTemplate = shiftTemplateRepository.findById(response.getId());
         assertThat(shiftTemplate.isPresent(), equalTo(true));
         assertThat(shiftTemplate.get().getName(), equalTo(request.getName()));
-        assertThat(shiftTemplate.get().getRequiredRole(), nullValue());
+        assertThat(shiftTemplate.get().getRequiredPermission(), nullValue());
     }
 
     @Test
@@ -133,17 +133,17 @@ class ShiftTemplateControllerIT
         assertThat(responseEntityWithoutName, notNullValue());
         assertThat(responseEntityWithoutName.getStatusCode(), equalTo(HttpStatus.BAD_REQUEST));
 
-        CreateOrUpdateShiftTemplateRequest requestWithBadRole = new CreateOrUpdateShiftTemplateRequest();
-        requestWithBadRole.setName(randomString());
-        requestWithBadRole.setRequiredRoleId(randomLong());
+        CreateOrUpdateShiftTemplateRequest requestWithBadPermission = new CreateOrUpdateShiftTemplateRequest();
+        requestWithBadPermission.setName(randomString());
+        requestWithBadPermission.setRequiredPermissionId(randomLong());
 
-        ResponseEntity<ShiftTemplateResponse> responseEntityWithBadRole = restTemplate.postForEntity(
+        ResponseEntity<ShiftTemplateResponse> responseEntityWithBadPermission = restTemplate.postForEntity(
                 url("/api/shift/template"),
-                requestWithBadRole,
+                requestWithBadPermission,
                 ShiftTemplateResponse.class);
 
-        assertThat(responseEntityWithBadRole, notNullValue());
-        assertThat(responseEntityWithBadRole.getStatusCode(), equalTo(HttpStatus.BAD_REQUEST));
+        assertThat(responseEntityWithBadPermission, notNullValue());
+        assertThat(responseEntityWithBadPermission.getStatusCode(), equalTo(HttpStatus.BAD_REQUEST));
     }
 
     @Test
@@ -152,11 +152,11 @@ class ShiftTemplateControllerIT
         ShiftTemplate originalShiftTemplate = createShiftTemplate();
         Long shiftTemplateId = originalShiftTemplate.getId();
 
-        Role newRole = createRole();
+        Permission newPermission = createPermission();
 
         CreateOrUpdateShiftTemplateRequest request = new CreateOrUpdateShiftTemplateRequest();
         request.setName(randomString());
-        request.setRequiredRoleId(newRole.getId());
+        request.setRequiredPermissionId(newPermission.getId());
 
         HttpEntity<CreateOrUpdateShiftTemplateRequest> httpEntity = new HttpEntity<>(request);
         ResponseEntity<ShiftTemplateResponse> responseEntity = restTemplate.exchange(
@@ -173,48 +173,48 @@ class ShiftTemplateControllerIT
         assertThat(shiftTemplateResponse, notNullValue());
         assertThat(shiftTemplateResponse.getId(), equalTo(shiftTemplateId));
         assertThat(shiftTemplateResponse.getName(), equalTo(request.getName()));
-        assertThat(shiftTemplateResponse.getRequiredRoleId(), equalTo(newRole.getId()));
+        assertThat(shiftTemplateResponse.getRequiredPermissionId(), equalTo(newPermission.getId()));
 
         Optional<ShiftTemplate> shiftTemplate = shiftTemplateRepository.findById(shiftTemplateId);
         assertThat(shiftTemplate.isPresent(), equalTo(true));
         assertThat(shiftTemplate.get().getName(), equalTo(request.getName()));
-        assertThat(shiftTemplate.get().getRequiredRole(), equalTo(newRole));
+        assertThat(shiftTemplate.get().getRequiredPermission(), equalTo(newPermission));
 
 
-        CreateOrUpdateShiftTemplateRequest requestWithoutRole = new CreateOrUpdateShiftTemplateRequest();
-        requestWithoutRole.setName(randomString());
+        CreateOrUpdateShiftTemplateRequest requestWithoutPermission = new CreateOrUpdateShiftTemplateRequest();
+        requestWithoutPermission.setName(randomString());
 
-        HttpEntity<CreateOrUpdateShiftTemplateRequest> httpEntityWithoutRole = new HttpEntity<>(requestWithoutRole);
-        ResponseEntity<ShiftTemplateResponse> responseEntityWithoutRole = restTemplate.exchange(
+        HttpEntity<CreateOrUpdateShiftTemplateRequest> httpEntityWithoutPermission = new HttpEntity<>(requestWithoutPermission);
+        ResponseEntity<ShiftTemplateResponse> responseEntityWithoutPermission = restTemplate.exchange(
                 url("/api/shift/template/{templateId}"),
                 HttpMethod.PUT,
-                httpEntityWithoutRole,
+                httpEntityWithoutPermission,
                 ShiftTemplateResponse.class,
                 shiftTemplateId);
 
-        assertThat(responseEntityWithoutRole, notNullValue());
-        assertThat(responseEntityWithoutRole.getStatusCode().is2xxSuccessful(), equalTo(true));
+        assertThat(responseEntityWithoutPermission, notNullValue());
+        assertThat(responseEntityWithoutPermission.getStatusCode().is2xxSuccessful(), equalTo(true));
 
-        ShiftTemplateResponse shiftTemplateResponseWithoutRole = responseEntityWithoutRole.getBody();
-        assertThat(shiftTemplateResponseWithoutRole, notNullValue());
-        assertThat(shiftTemplateResponseWithoutRole.getId(), equalTo(shiftTemplateId));
-        assertThat(shiftTemplateResponseWithoutRole.getName(), equalTo(requestWithoutRole.getName()));
-        assertThat(shiftTemplateResponseWithoutRole.getRequiredRoleId(), nullValue());
+        ShiftTemplateResponse shiftTemplateResponseWithoutPermission = responseEntityWithoutPermission.getBody();
+        assertThat(shiftTemplateResponseWithoutPermission, notNullValue());
+        assertThat(shiftTemplateResponseWithoutPermission.getId(), equalTo(shiftTemplateId));
+        assertThat(shiftTemplateResponseWithoutPermission.getName(), equalTo(requestWithoutPermission.getName()));
+        assertThat(shiftTemplateResponseWithoutPermission.getRequiredPermissionId(), nullValue());
 
-        Optional<ShiftTemplate> shiftTemplateWithoutRole = shiftTemplateRepository.findById(shiftTemplateId);
-        assertThat(shiftTemplateWithoutRole.isPresent(), equalTo(true));
-        assertThat(shiftTemplateWithoutRole.get().getName(), equalTo(requestWithoutRole.getName()));
+        Optional<ShiftTemplate> shiftTemplateWithoutPermission = shiftTemplateRepository.findById(shiftTemplateId);
+        assertThat(shiftTemplateWithoutPermission.isPresent(), equalTo(true));
+        assertThat(shiftTemplateWithoutPermission.get().getName(), equalTo(requestWithoutPermission.getName()));
     }
 
     @Test
     public void updateShiftTemplateCreatesShiftTemplateWhenOriginalDoesNotExist()
     {
         Long shiftTemplateId = randomLong();
-        Role newRole = createRole();
+        Permission newPermission = createPermission();
 
         CreateOrUpdateShiftTemplateRequest request = new CreateOrUpdateShiftTemplateRequest();
         request.setName(randomString());
-        request.setRequiredRoleId(newRole.getId());
+        request.setRequiredPermissionId(newPermission.getId());
 
         HttpEntity<CreateOrUpdateShiftTemplateRequest> httpEntity = new HttpEntity<>(request);
         ResponseEntity<ShiftTemplateResponse> responseEntity = restTemplate.exchange(
@@ -232,50 +232,50 @@ class ShiftTemplateControllerIT
         assertThat(shiftTemplateResponse.getId(), notNullValue());
         addDbCleanup("shift_template", shiftTemplateResponse.getId());
         assertThat(shiftTemplateResponse.getName(), equalTo(request.getName()));
-        assertThat(shiftTemplateResponse.getRequiredRoleId(), equalTo(newRole.getId()));
+        assertThat(shiftTemplateResponse.getRequiredPermissionId(), equalTo(newPermission.getId()));
 
         Optional<ShiftTemplate> shiftTemplate = shiftTemplateRepository.findById(shiftTemplateResponse.getId());
         assertThat(shiftTemplate.isPresent(), equalTo(true));
         assertThat(shiftTemplate.get().getName(), equalTo(request.getName()));
-        assertThat(shiftTemplate.get().getRequiredRole(), equalTo(newRole));
+        assertThat(shiftTemplate.get().getRequiredPermission(), equalTo(newPermission));
 
 
-        Long shiftTemplateIdWithoutRole = randomLong();
+        Long shiftTemplateIdWithoutPermission = randomLong();
 
-        CreateOrUpdateShiftTemplateRequest requestWithoutRole = new CreateOrUpdateShiftTemplateRequest();
-        requestWithoutRole.setName(randomString());
+        CreateOrUpdateShiftTemplateRequest requestWithoutPermission = new CreateOrUpdateShiftTemplateRequest();
+        requestWithoutPermission.setName(randomString());
 
-        HttpEntity<CreateOrUpdateShiftTemplateRequest> httpEntityWithoutRole = new HttpEntity<>(requestWithoutRole);
-        ResponseEntity<ShiftTemplateResponse> responseEntityWithoutRole = restTemplate.exchange(
+        HttpEntity<CreateOrUpdateShiftTemplateRequest> httpEntityWithoutPermission = new HttpEntity<>(requestWithoutPermission);
+        ResponseEntity<ShiftTemplateResponse> responseEntityWithoutPermission = restTemplate.exchange(
                 url("/api/shift/template/{templateId}"),
                 HttpMethod.PUT,
-                httpEntityWithoutRole,
+                httpEntityWithoutPermission,
                 ShiftTemplateResponse.class,
-                shiftTemplateIdWithoutRole);
+                shiftTemplateIdWithoutPermission);
 
-        assertThat(responseEntityWithoutRole, notNullValue());
-        assertThat(responseEntityWithoutRole.getStatusCode().is2xxSuccessful(), equalTo(true));
+        assertThat(responseEntityWithoutPermission, notNullValue());
+        assertThat(responseEntityWithoutPermission.getStatusCode().is2xxSuccessful(), equalTo(true));
 
-        ShiftTemplateResponse shiftTemplateResponseWithoutRole = responseEntityWithoutRole.getBody();
-        assertThat(shiftTemplateResponseWithoutRole, notNullValue());
-        assertThat(shiftTemplateResponseWithoutRole.getId(), notNullValue());
-        addDbCleanup("shift_template", shiftTemplateResponseWithoutRole.getId());
-        assertThat(shiftTemplateResponseWithoutRole.getName(), equalTo(requestWithoutRole.getName()));
+        ShiftTemplateResponse shiftTemplateResponseWithoutPermission = responseEntityWithoutPermission.getBody();
+        assertThat(shiftTemplateResponseWithoutPermission, notNullValue());
+        assertThat(shiftTemplateResponseWithoutPermission.getId(), notNullValue());
+        addDbCleanup("shift_template", shiftTemplateResponseWithoutPermission.getId());
+        assertThat(shiftTemplateResponseWithoutPermission.getName(), equalTo(requestWithoutPermission.getName()));
 
-        Optional<ShiftTemplate> shiftTemplateWithoutRole = shiftTemplateRepository.findById(shiftTemplateResponseWithoutRole.getId());
-        assertThat(shiftTemplateWithoutRole.isPresent(), equalTo(true));
-        assertThat(shiftTemplateWithoutRole.get().getName(), equalTo(requestWithoutRole.getName()));
+        Optional<ShiftTemplate> shiftTemplateWithoutPermission = shiftTemplateRepository.findById(shiftTemplateResponseWithoutPermission.getId());
+        assertThat(shiftTemplateWithoutPermission.isPresent(), equalTo(true));
+        assertThat(shiftTemplateWithoutPermission.get().getName(), equalTo(requestWithoutPermission.getName()));
     }
 
     @Test
     public void updateShiftTemplateReturnsBadRequestWhenRequestIsInvalid()
     {
-        Role role = createRole();
+        Permission permission = createPermission();
         ShiftTemplate originalShiftTemplate = createShiftTemplate();
         Long shiftTemplateId = originalShiftTemplate.getId();
 
         CreateOrUpdateShiftTemplateRequest requestWithoutName = new CreateOrUpdateShiftTemplateRequest();
-        requestWithoutName.setRequiredRoleId(role.getId());
+        requestWithoutName.setRequiredPermissionId(permission.getId());
 
         HttpEntity<CreateOrUpdateShiftTemplateRequest> httpEntityWithoutName = new HttpEntity<>(requestWithoutName);
         ResponseEntity<ShiftTemplateResponse> responseEntityWithoutName = restTemplate.exchange(
@@ -289,30 +289,30 @@ class ShiftTemplateControllerIT
         assertThat(responseEntityWithoutName.getStatusCode(), equalTo(HttpStatus.BAD_REQUEST));
 
 
-        CreateOrUpdateShiftTemplateRequest requestWithBadRole = new CreateOrUpdateShiftTemplateRequest();
-        requestWithBadRole.setName(randomString());
-        requestWithBadRole.setRequiredRoleId(randomLong());
+        CreateOrUpdateShiftTemplateRequest requestWithBadPermission = new CreateOrUpdateShiftTemplateRequest();
+        requestWithBadPermission.setName(randomString());
+        requestWithBadPermission.setRequiredPermissionId(randomLong());
 
-        HttpEntity<CreateOrUpdateShiftTemplateRequest> httpEntityWithBadRole = new HttpEntity<>(requestWithBadRole);
-        ResponseEntity<ShiftTemplateResponse> responseEntityWithBadRole = restTemplate.exchange(
+        HttpEntity<CreateOrUpdateShiftTemplateRequest> httpEntityWithBadPermission = new HttpEntity<>(requestWithBadPermission);
+        ResponseEntity<ShiftTemplateResponse> responseEntityWithBadPermission = restTemplate.exchange(
                 url("/api/shift/template/{templateId}"),
                 HttpMethod.PUT,
-                httpEntityWithBadRole,
+                httpEntityWithBadPermission,
                 ShiftTemplateResponse.class,
                 shiftTemplateId);
 
-        assertThat(responseEntityWithBadRole, notNullValue());
-        assertThat(responseEntityWithBadRole.getStatusCode(), equalTo(HttpStatus.BAD_REQUEST));
+        assertThat(responseEntityWithBadPermission, notNullValue());
+        assertThat(responseEntityWithBadPermission.getStatusCode(), equalTo(HttpStatus.BAD_REQUEST));
     }
 
     @Test
     public void updateShiftTemplateReturnsBadRequestWhenOriginalDoesNotExistAndRequestIsInvalid()
     {
-        Role role = createRole();
+        Permission permission = createPermission();
         Long shiftTemplateId = randomLong();
 
         CreateOrUpdateShiftTemplateRequest requestWithoutName = new CreateOrUpdateShiftTemplateRequest();
-        requestWithoutName.setRequiredRoleId(role.getId());
+        requestWithoutName.setRequiredPermissionId(permission.getId());
 
         HttpEntity<CreateOrUpdateShiftTemplateRequest> httpEntityWithoutName = new HttpEntity<>(requestWithoutName);
         ResponseEntity<ShiftTemplateResponse> responseEntityWithoutName = restTemplate.exchange(
@@ -326,20 +326,20 @@ class ShiftTemplateControllerIT
         assertThat(responseEntityWithoutName.getStatusCode(), equalTo(HttpStatus.BAD_REQUEST));
 
 
-        CreateOrUpdateShiftTemplateRequest requestWithBadRole = new CreateOrUpdateShiftTemplateRequest();
-        requestWithBadRole.setName(randomString());
-        requestWithBadRole.setRequiredRoleId(randomLong());
+        CreateOrUpdateShiftTemplateRequest requestWithBadPermission = new CreateOrUpdateShiftTemplateRequest();
+        requestWithBadPermission.setName(randomString());
+        requestWithBadPermission.setRequiredPermissionId(randomLong());
 
-        HttpEntity<CreateOrUpdateShiftTemplateRequest> httpEntityWithBadRole = new HttpEntity<>(requestWithBadRole);
-        ResponseEntity<ShiftTemplateResponse> responseEntityWithBadRole = restTemplate.exchange(
+        HttpEntity<CreateOrUpdateShiftTemplateRequest> httpEntityWithBadPermission = new HttpEntity<>(requestWithBadPermission);
+        ResponseEntity<ShiftTemplateResponse> responseEntityWithBadPermission = restTemplate.exchange(
                 url("/api/shift/template/{templateId}"),
                 HttpMethod.PUT,
-                httpEntityWithBadRole,
+                httpEntityWithBadPermission,
                 ShiftTemplateResponse.class,
                 shiftTemplateId);
 
-        assertThat(responseEntityWithBadRole, notNullValue());
-        assertThat(responseEntityWithBadRole.getStatusCode(), equalTo(HttpStatus.BAD_REQUEST));
+        assertThat(responseEntityWithBadPermission, notNullValue());
+        assertThat(responseEntityWithBadPermission.getStatusCode(), equalTo(HttpStatus.BAD_REQUEST));
     }
 
     @Test
@@ -558,25 +558,25 @@ class ShiftTemplateControllerIT
 
     private ShiftTemplate createShiftTemplate(String name)
     {
-        Role role = createRole();
+        Permission permission = createPermission();
 
         ShiftTemplate shiftTemplate = new ShiftTemplate();
         shiftTemplate.setName(name);
-        shiftTemplate.setRequiredRole(role);
+        shiftTemplate.setRequiredPermission(permission);
         shiftTemplate = shiftTemplateRepository.save(shiftTemplate);
         addDbCleanup("shift_template", shiftTemplate.getId());
 
         return shiftTemplate;
     }
 
-    private Role createRole()
+    private Permission createPermission()
     {
-        Role role = new Role();
-        role.setName(randomString());
-        role = roleRepository.save(role);
-        addDbCleanup("role", role.getId());
+        Permission permission = new Permission();
+        permission.setName(randomString());
+        permission = permissionRepository.save(permission);
+        addDbCleanup("permission", permission.getId());
 
-        return role;
+        return permission;
     }
 
     private void validateShiftTemplateResponse(ShiftTemplateResponse response, ShiftTemplate shiftTemplate)
@@ -589,10 +589,10 @@ class ShiftTemplateControllerIT
         assertThat(response, notNullValue());
         assertThat(response.getId(), equalTo(shiftTemplate.getId()));
         assertThat(response.getName(), equalTo(shiftTemplate.getName()));
-        if (shiftTemplate.getRequiredRole() == null) {
-            assertThat(response.getRequiredRoleId(), nullValue());
+        if (shiftTemplate.getRequiredPermission() == null) {
+            assertThat(response.getRequiredPermissionId(), nullValue());
         } else {
-            assertThat(response.getRequiredRoleId(), equalTo(shiftTemplate.getRequiredRole().getId()));
+            assertThat(response.getRequiredPermissionId(), equalTo(shiftTemplate.getRequiredPermission().getId()));
         }
     }
 }

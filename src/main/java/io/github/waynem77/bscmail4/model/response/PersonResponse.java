@@ -1,7 +1,7 @@
 package io.github.waynem77.bscmail4.model.response;
 
+import io.github.waynem77.bscmail4.model.entity.Permission;
 import io.github.waynem77.bscmail4.model.entity.Person;
-import io.github.waynem77.bscmail4.model.entity.Role;
 import lombok.Data;
 import lombok.NonNull;
 
@@ -19,7 +19,7 @@ public class PersonResponse
     private String name;
     private String emailAddress;
     private String phone;
-    private List<RoleResponse> roles;
+    private List<PermissionResponse> permissions;
     private Boolean active;
 
 
@@ -36,10 +36,10 @@ public class PersonResponse
         response.setName(person.getName());
         response.setEmailAddress(person.getEmailAddress());
         response.setPhone(person.getPhone());
-        response.setRoles(
-                (person.getRoles() != null ? person.getRoles().stream() : Stream.<Role>empty())
-                        .map(RoleResponse::fromRole)
-                        .sorted(Comparator.comparing(RoleResponse::getName))
+        response.setPermissions(
+                (person.getPermissions() != null ? person.getPermissions().stream() : Stream.<Permission>empty())
+                        .map(PermissionResponse::fromPermission)
+                        .sorted(Comparator.comparing(PermissionResponse::getName))
                         .toList());
         response.setActive(person.getActive());
 

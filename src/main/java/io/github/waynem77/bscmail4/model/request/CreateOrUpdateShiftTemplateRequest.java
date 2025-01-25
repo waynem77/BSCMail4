@@ -9,5 +9,5 @@ import lombok.Data;
 public class CreateOrUpdateShiftTemplateRequest
 {
     private String name;
-    private Long requiredRoleId;
+    private Long requiredPermissionId;
 }

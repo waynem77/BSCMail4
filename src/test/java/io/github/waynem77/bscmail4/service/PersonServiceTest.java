@@ -2,10 +2,10 @@ package io.github.waynem77.bscmail4.service;
 
 import io.github.waynem77.bscmail4.exception.BadRequestException;
 import io.github.waynem77.bscmail4.exception.NotFoundException;
+import io.github.waynem77.bscmail4.model.entity.Permission;
 import io.github.waynem77.bscmail4.model.entity.Person;
-import io.github.waynem77.bscmail4.model.entity.Role;
+import io.github.waynem77.bscmail4.model.repository.PermissionRepository;
 import io.github.waynem77.bscmail4.model.repository.PersonRepository;
-import io.github.waynem77.bscmail4.model.repository.RoleRepository;
 import io.github.waynem77.bscmail4.model.request.CreateOrUpdatePersonRequest;
 import io.github.waynem77.bscmail4.model.response.PeopleResponse;
 import io.github.waynem77.bscmail4.model.response.PersonResponse;
@@ -40,7 +40,7 @@ import static org.mockito.Mockito.*;
 class PersonServiceTest
 {
     private PersonRepository personRepository;
-    private RoleRepository roleRepository;
+    private PermissionRepository permissionRepository;
 
     private Person person;
     private CreateOrUpdatePersonRequest request;
@@ -49,7 +49,7 @@ class PersonServiceTest
     public void setup()
     {
         personRepository = mock(PersonRepository.class);
-        roleRepository = mock(RoleRepository.class);
+        permissionRepository = mock(PermissionRepository.class);
 
         resetPersonAndRequest();
 
@@ -153,7 +153,7 @@ class PersonServiceTest
         verify(person).setName(request.getName());
         verify(person).setEmailAddress(request.getEmailAddress());
         verify(person).setPhone(request.getPhone());
-        verify(person).setRoles(any());
+        verify(person).setPermissions(any());
         verify(person).setActive(request.getActive());
 
         verify(personRepository).save(person);
@@ -187,18 +187,18 @@ class PersonServiceTest
     public void getPersonReturnsCorrectValue()
     {
         Person person = randomPerson();
-        Role role = person.getRoles().stream().findFirst().get();
+        Permission permission = person.getPermissions().stream().findFirst().get();
         given(personRepository.findById(person.getId())).willReturn(Optional.of(person));
 
         PersonService personService = createTestable();
 
         PersonResponse response = personService.getPerson(person.getId());
         validateResponseFromPerson(response, person);
-        assertThat(response.getRoles(), notNullValue());
-        assertThat(response.getRoles().size(), equalTo(1));
-        assertThat(response.getRoles().get(0), notNullValue());
-        assertThat(response.getRoles().get(0).getId(), equalTo(role.getId()));
-        assertThat(response.getRoles().get(0).getName(), equalTo(role.getName()));
+        assertThat(response.getPermissions(), notNullValue());
+        assertThat(response.getPermissions().size(), equalTo(1));
+        assertThat(response.getPermissions().get(0), notNullValue());
+        assertThat(response.getPermissions().get(0).getId(), equalTo(permission.getId()));
+        assertThat(response.getPermissions().get(0).getName(), equalTo(permission.getName()));
     }
 
     @Test
@@ -227,46 +227,46 @@ class PersonServiceTest
 
     private void resetPersonAndRequest()
     {
-        Long roleId = randomLong();
-        String roleName = randomString();
+        Long permissionId = randomLong();
+        String permissionName = randomString();
         Long personId = randomLong();
         String personName = randomString();
         String personEmailAddress = randomString();
         String personPhone = randomString();
         Boolean personActive = randomBoolean();
 
-        Role role = mock(Role.class);
-        given(role.getId()).willReturn(roleId);
-        given(role.getName()).willReturn(roleName);
+        Permission permission = mock(Permission.class);
+        given(permission.getId()).willReturn(permissionId);
+        given(permission.getName()).willReturn(permissionName);
 
         person = mock(Person.class);
         given(person.getId()).willReturn(personId);
         given(person.getName()).willReturn(personName);
         given(person.getEmailAddress()).willReturn(personEmailAddress);
         given(person.getPhone()).willReturn(personPhone);
-        given(person.getRoles()).willReturn(Set.of(role));
+        given(person.getPermissions()).willReturn(Set.of(permission));
         given(person.getActive()).willReturn(personActive);
 
         request = mock(CreateOrUpdatePersonRequest.class);
         given(request.getName()).willReturn(personName);
         given(request.getEmailAddress()).willReturn(personEmailAddress);
         given(request.getPhone()).willReturn(personPhone);
-        given(request.getRoleIds()).willReturn(List.of(roleId));
+        given(request.getPermissionIds()).willReturn(List.of(permissionId));
         given(request.getActive()).willReturn(personActive);
     }
 
     private Person randomPerson()
     {
-        Role role = mock(Role.class);
-        given(role.getId()).willReturn(randomLong());
-        given(role.getName()).willReturn(randomString());
+        Permission permission = mock(Permission.class);
+        given(permission.getId()).willReturn(randomLong());
+        given(permission.getName()).willReturn(randomString());
 
         Person person = mock(Person.class);
         given(person.getId()).willReturn(randomLong());
         given(person.getName()).willReturn(randomString());
         given(person.getEmailAddress()).willReturn(randomString());
         given(person.getPhone()).willReturn(randomString());
-        given(person.getRoles()).willReturn(Set.of(role));
+        given(person.getPermissions()).willReturn(Set.of(permission));
         given(person.getActive()).willReturn(randomBoolean());
 
         return person;
@@ -274,8 +274,7 @@ class PersonServiceTest
 
     private void validatePersonFromRequest(Person person, CreateOrUpdatePersonRequest request)
     {
-        if (request == null)
-        {
+        if (request == null) {
             assertThat(person, nullValue());
             return;
         }
@@ -289,8 +288,7 @@ class PersonServiceTest
 
     private void validateResponseFromRequest(PersonResponse response, CreateOrUpdatePersonRequest request)
     {
-        if (request == null)
-        {
+        if (request == null) {
             assertThat(response, nullValue());
             return;
         }
@@ -304,8 +302,7 @@ class PersonServiceTest
 
     private void validateResponseFromPerson(PersonResponse response, Person person)
     {
-        if (request == null)
-        {
+        if (request == null) {
             assertThat(response, nullValue());
             return;
         }
@@ -321,6 +318,6 @@ class PersonServiceTest
     {
         return new PersonService(
                 personRepository,
-                roleRepository);
+                permissionRepository);
     }
 }

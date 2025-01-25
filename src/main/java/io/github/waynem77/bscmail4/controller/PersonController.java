@@ -27,19 +27,19 @@ public class PersonController
     public PeopleResponse getPeople(
             @RequestParam(name = "active", required = false) Boolean active,
             @RequestParam(name = "like", required = false) String like,
-            @RequestParam(name = "roleIds", required = false) String roleIdString,
+            @RequestParam(name = "permissionIds", required = false) String permissionIdString,
             @RequestParam(name = "page", required = false, defaultValue = "0") int page,
             @RequestParam(name = "size", required = false, defaultValue = "25") int size)
     {
-        Set<Long> roleIds = roleIdString == null ?
+        Set<Long> permissionIds = permissionIdString == null ?
                 null :
-                Arrays.stream(roleIdString.split(","))
+                Arrays.stream(permissionIdString.split(","))
                         .map(Long::valueOf)
                         .collect(Collectors.toSet());
         PersonFilter filter = new PersonFilter()
                 .withActive(active)
                 .withNameLike(like)
-                .withRoleIds(roleIds);
+                .withPermissionIds(permissionIds);
         return personService.getPeopleFiltered(filter, page, size);
     }
 
