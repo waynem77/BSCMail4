@@ -1,22 +1,16 @@
 package io.github.waynem77.bscmail4.controller;
 
-import io.github.waynem77.bscmail4.DbCleaner;
 import io.github.waynem77.bscmail4.model.entity.Permission;
 import io.github.waynem77.bscmail4.model.repository.PermissionRepository;
 import io.github.waynem77.bscmail4.model.request.CreatePermissionRequest;
 import io.github.waynem77.bscmail4.model.response.PermissionResponse;
 import io.github.waynem77.bscmail4.model.response.PermissionsResponse;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
 import java.util.Optional;
@@ -29,48 +23,27 @@ import static org.hamcrest.MatcherAssert.assertThat;
  * Provides integration tests for the {@link PermissionController}.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class PermissionControllerIT
+class PermissionControllerIT extends BaseIT
 {
-    @LocalServerPort
-    String port;
-
-    @Autowired
-    private TestRestTemplate testRestTemplate;
-
     @Autowired
     private PermissionRepository permissionRepository;
-
-    @Autowired
-    JdbcTemplate jdbcTemplate;
-
-    private DbCleaner dbCleaner;
-
-    @BeforeEach
-    public void setup()
-    {
-        dbCleaner = new DbCleaner(jdbcTemplate);
-    }
-
-    @AfterEach
-    public void cleanup()
-    {
-        dbCleaner.clean();
-    }
 
     @Test
     public void getAllPermissionsReturnsTheCorrectValue()
     {
+        permissionRepository.deleteAll();
+
         List<Permission> permissions = List.of(
                 createPermissionWithPrefix("a"),
                 createPermissionWithPrefix("d"),
                 createPermissionWithPrefix("e"),
                 createPermissionWithPrefix("b"),
                 createPermissionWithPrefix("c"));
-        List<PermissionResponse> permissionRespons = permissions.stream()
+        List<PermissionResponse> permissionResponse = permissions.stream()
                 .map(PermissionResponse::fromPermission)
                 .toList();
 
-        ResponseEntity<PermissionsResponse> defaultValuesResponseEntity = testRestTemplate.getForEntity(
+        ResponseEntity<PermissionsResponse> defaultValuesResponseEntity = restTemplate.getForEntity(
                 url("/api/permission"),
                 PermissionsResponse.class);
         assertThat(defaultValuesResponseEntity, notNullValue());
@@ -85,13 +58,13 @@ class PermissionControllerIT
         assertThat(defaultValuesPage.getPageInfo().isFirst(), equalTo(true));
         assertThat(defaultValuesPage.getPageInfo().isLast(), equalTo(true));
         assertThat(defaultValuesPage.getContent(), equalTo(List.of(
-                permissionRespons.get(0),
-                permissionRespons.get(3),
-                permissionRespons.get(4),
-                permissionRespons.get(1),
-                permissionRespons.get(2))));
+                permissionResponse.get(0),
+                permissionResponse.get(3),
+                permissionResponse.get(4),
+                permissionResponse.get(1),
+                permissionResponse.get(2))));
 
-        ResponseEntity<PermissionsResponse> page0ResponseEntity = testRestTemplate.getForEntity(
+        ResponseEntity<PermissionsResponse> page0ResponseEntity = restTemplate.getForEntity(
                 url("/api/permission?page=0&size=2"),
                 PermissionsResponse.class);
         assertThat(page0ResponseEntity, notNullValue());
@@ -106,10 +79,10 @@ class PermissionControllerIT
         assertThat(page0.getPageInfo().isFirst(), equalTo(true));
         assertThat(page0.getPageInfo().isLast(), equalTo(false));
         assertThat(page0.getContent(), equalTo(List.of(
-                permissionRespons.get(0),
-                permissionRespons.get(3))));
+                permissionResponse.get(0),
+                permissionResponse.get(3))));
 
-        ResponseEntity<PermissionsResponse> page1ResponseEntity = testRestTemplate.getForEntity(
+        ResponseEntity<PermissionsResponse> page1ResponseEntity = restTemplate.getForEntity(
                 url("/api/permission?page=1&size=2"),
                 PermissionsResponse.class);
         assertThat(page1ResponseEntity, notNullValue());
@@ -124,10 +97,10 @@ class PermissionControllerIT
         assertThat(page1.getPageInfo().isFirst(), equalTo(false));
         assertThat(page1.getPageInfo().isLast(), equalTo(false));
         assertThat(page1.getContent(), equalTo(List.of(
-                permissionRespons.get(4),
-                permissionRespons.get(1))));
+                permissionResponse.get(4),
+                permissionResponse.get(1))));
 
-        ResponseEntity<PermissionsResponse> page2ResponseEntity = testRestTemplate.getForEntity(
+        ResponseEntity<PermissionsResponse> page2ResponseEntity = restTemplate.getForEntity(
                 url("/api/permission?page=2&size=2"),
                 PermissionsResponse.class);
         assertThat(page2ResponseEntity, notNullValue());
@@ -142,7 +115,7 @@ class PermissionControllerIT
         assertThat(page2.getPageInfo().isFirst(), equalTo(false));
         assertThat(page2.getPageInfo().isLast(), equalTo(true));
         assertThat(page2.getContent(), equalTo(List.of(
-                permissionRespons.get(2))));
+                permissionResponse.get(2))));
     }
 
     @Test
@@ -151,7 +124,7 @@ class PermissionControllerIT
         CreatePermissionRequest request = new CreatePermissionRequest()
                 .withName(randomString());
 
-        ResponseEntity<PermissionResponse> responseEntity = testRestTemplate.postForEntity(
+        ResponseEntity<PermissionResponse> responseEntity = restTemplate.postForEntity(
                 url("/api/permission"),
                 request,
                 PermissionResponse.class);
@@ -171,11 +144,11 @@ class PermissionControllerIT
     }
 
     @Test
-    public void createPermissionReturnsBadRequestWhenRequstIsInvalid()
+    public void createPermissionReturnsBadRequestWhenRequestIsInvalid()
     {
         CreatePermissionRequest request = new CreatePermissionRequest();
 
-        ResponseEntity<PermissionResponse> responseEntity = testRestTemplate.postForEntity(
+        ResponseEntity<PermissionResponse> responseEntity = restTemplate.postForEntity(
                 url("/api/permission"),
                 request,
                 PermissionResponse.class);
@@ -190,7 +163,7 @@ class PermissionControllerIT
         CreatePermissionRequest request = new CreatePermissionRequest()
                 .withName(randomString());
 
-        ResponseEntity<PermissionResponse> originalResponseEntity = testRestTemplate.postForEntity(
+        ResponseEntity<PermissionResponse> originalResponseEntity = restTemplate.postForEntity(
                 url("/api/permission"),
                 request,
                 PermissionResponse.class,
@@ -200,7 +173,7 @@ class PermissionControllerIT
         assertThat(originalResponseEntity.getStatusCode().is2xxSuccessful(), equalTo(true));
         addDbCleanup("permission", originalResponseEntity.getBody().getId());
 
-        ResponseEntity<PermissionResponse> duplicateResponseEntity = testRestTemplate.postForEntity(
+        ResponseEntity<PermissionResponse> duplicateResponseEntity = restTemplate.postForEntity(
                 url("/api/permission"),
                 request,
                 PermissionResponse.class,
@@ -215,7 +188,7 @@ class PermissionControllerIT
     {
         Permission permission = createPermission();
 
-        ResponseEntity<PermissionResponse> responseEntity = testRestTemplate.getForEntity(
+        ResponseEntity<PermissionResponse> responseEntity = restTemplate.getForEntity(
                 url("/api/permission/{permissionId}"),
                 PermissionResponse.class,
                 permission.getId());
@@ -224,14 +197,14 @@ class PermissionControllerIT
         assertThat(responseEntity.getStatusCode().is2xxSuccessful(), equalTo(true));
 
         PermissionResponse permissionResponse = responseEntity.getBody();
-        verifyPermissionReponse(permissionResponse, permission);
+        verifyPermissionResponse(permissionResponse, permission);
     }
 
     @Test
     public void getPermissionByIdReturnsNotFoundWhenPermissionDoesNotExist()
     {
         Long permissionId = randomLong();
-        ResponseEntity<PermissionResponse> responseEntity = testRestTemplate.getForEntity(
+        ResponseEntity<PermissionResponse> responseEntity = restTemplate.getForEntity(
                 url("/api/permission/{permissionId}"),
                 PermissionResponse.class,
                 permissionId);
@@ -248,7 +221,7 @@ class PermissionControllerIT
                 createPermission(),
                 createPermission());
 
-        ResponseEntity<Void> responseEntity = testRestTemplate.exchange(
+        ResponseEntity<Void> responseEntity = restTemplate.exchange(
                 url("/api/permission/{permissionId}"),
                 HttpMethod.DELETE,
                 null,
@@ -271,7 +244,7 @@ class PermissionControllerIT
                 createPermission(),
                 createPermission());
 
-        ResponseEntity<Void> responseEntityForExistingPermission = testRestTemplate.exchange(
+        ResponseEntity<Void> responseEntityForExistingPermission = restTemplate.exchange(
                 url("/api/permission/{permissionId}"),
                 HttpMethod.DELETE,
                 null,
@@ -285,7 +258,7 @@ class PermissionControllerIT
         assertThat(permissionRepository.findById(permissions.get(1).getId()).isPresent(), equalTo(true));
         assertThat(permissionRepository.findById(permissions.get(2).getId()).isPresent(), equalTo(true));
 
-        ResponseEntity<Void> responseEntityForDeletedPermission = testRestTemplate.exchange(
+        ResponseEntity<Void> responseEntityForDeletedPermission = restTemplate.exchange(
                 url("/api/permission/{permissionId}"),
                 HttpMethod.DELETE,
                 null,
@@ -299,7 +272,7 @@ class PermissionControllerIT
         assertThat(permissionRepository.findById(permissions.get(1).getId()).isPresent(), equalTo(true));
         assertThat(permissionRepository.findById(permissions.get(2).getId()).isPresent(), equalTo(true));
 
-        ResponseEntity<Void> responseEntityForNonexistentPermission = testRestTemplate.exchange(
+        ResponseEntity<Void> responseEntityForNonexistentPermission = restTemplate.exchange(
                 url("/api/permission/{permissionId}"),
                 HttpMethod.DELETE,
                 null,
@@ -314,18 +287,7 @@ class PermissionControllerIT
         assertThat(permissionRepository.findById(permissions.get(2).getId()).isPresent(), equalTo(true));
     }
 
-
-    private String url(String endpoint)
-    {
-        return "http://localhost:" + port + endpoint;
-    }
-
-    private <T> void addDbCleanup(String table, T id)
-    {
-        dbCleaner.addCleanup(table, id);
-    }
-
-    private void verifyPermissionReponse(PermissionResponse received, Permission expected)
+    private void verifyPermissionResponse(PermissionResponse received, Permission expected)
     {
         if (expected == null) {
             assertThat(received, nullValue());

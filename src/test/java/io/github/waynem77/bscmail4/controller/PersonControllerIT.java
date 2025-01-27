@@ -1,6 +1,5 @@
 package io.github.waynem77.bscmail4.controller;
 
-import io.github.waynem77.bscmail4.DbCleaner;
 import io.github.waynem77.bscmail4.model.entity.Permission;
 import io.github.waynem77.bscmail4.model.entity.Person;
 import io.github.waynem77.bscmail4.model.repository.PermissionRepository;
@@ -9,7 +8,6 @@ import io.github.waynem77.bscmail4.model.request.CreateOrUpdatePersonRequest;
 import io.github.waynem77.bscmail4.model.response.PeopleResponse;
 import io.github.waynem77.bscmail4.model.response.PermissionResponse;
 import io.github.waynem77.bscmail4.model.response.PersonResponse;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -17,13 +15,10 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -37,47 +32,30 @@ import static org.hamcrest.MatcherAssert.assertThat;
  * Provides integration tests for {@link PersonController}.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class PersonControllerIT
+class PersonControllerIT extends BaseIT
 {
-    @LocalServerPort
-    String port;
-
-    @Autowired
-    private TestRestTemplate restTemplate;
-
     @Autowired
     private PermissionRepository permissionRepository;
 
     @Autowired
     private PersonRepository personRepository;
 
-    @Autowired
-    JdbcTemplate jdbcTemplate;
-
-    private DbCleaner dbCleaner;
-
     private List<Permission> permissions;
 
     @BeforeEach
     public void setup()
     {
-        dbCleaner = new DbCleaner(jdbcTemplate);
-
         permissions = List.of(
                 createPermissionWithPrefix("a"),
                 createPermissionWithPrefix("b"),
                 createPermissionWithPrefix("c"));
     }
 
-    @AfterEach
-    public void cleanup()
-    {
-        dbCleaner.clean();
-    }
-
     @Test
     public void getPeople_gets_all_people_by_default()
     {
+        personRepository.deleteAll();
+
         List<Permission> permissions = List.of(
                 createPermission(),
                 createPermission(),
@@ -120,6 +98,8 @@ class PersonControllerIT
     @Test
     public void getPeople_filters_correctly()
     {
+        personRepository.deleteAll();
+
         List<Permission> permissions = List.of(
                 createPermission(),
                 createPermission(),
@@ -221,6 +201,8 @@ class PersonControllerIT
     @Test
     public void getPeople_sorts_by_name_ascending()
     {
+        personRepository.deleteAll();
+
         List<Permission> permissions = List.of(
                 createPermission(),
                 createPermission(),
@@ -260,6 +242,8 @@ class PersonControllerIT
     @Test
     public void getPeople_pages_correctly()
     {
+        personRepository.deleteAll();
+
         List<Permission> permissions = List.of(
                 createPermission(),
                 createPermission(),
@@ -626,16 +610,6 @@ class PersonControllerIT
                 .map(Arguments::arguments);
     }
 
-    private String url(String endpoint)
-    {
-        return "http://localhost:" + port + endpoint;
-    }
-
-    private <T> void addDbCleanup(String table, T id)
-    {
-        dbCleaner.addCleanup(table, id);
-    }
-
     private Permission createPermission()
     {
         return createPermission(randomString());
@@ -718,7 +692,7 @@ class PersonControllerIT
         assertThat(response.getPhone(), equalTo(person.getPhone()));
         assertThat(response.getActive(), equalTo(person.getActive()));
 
-        Set<PermissionResponse> expectedPermissionRespons = (person.getPermissions() != null ? person.getPermissions().stream() :
+        Set<PermissionResponse> expectedPermissionResponse = (person.getPermissions() != null ? person.getPermissions().stream() :
                 Stream.<Permission>empty())
                 .map(permission ->
                 {
@@ -728,6 +702,6 @@ class PersonControllerIT
                     return permissionResponse;
                 })
                 .collect(Collectors.toSet());
-        assertThat(response.getPermissions(), equalToUnordered(expectedPermissionRespons));
+        assertThat(response.getPermissions(), equalToUnordered(expectedPermissionResponse));
     }
 }

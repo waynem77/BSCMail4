@@ -1,6 +1,5 @@
 package io.github.waynem77.bscmail4.controller;
 
-import io.github.waynem77.bscmail4.DbCleaner;
 import io.github.waynem77.bscmail4.model.entity.Permission;
 import io.github.waynem77.bscmail4.model.entity.ShiftTemplate;
 import io.github.waynem77.bscmail4.model.repository.PermissionRepository;
@@ -8,18 +7,13 @@ import io.github.waynem77.bscmail4.model.repository.ShiftTemplateRepository;
 import io.github.waynem77.bscmail4.model.request.CreateOrUpdateShiftTemplateRequest;
 import io.github.waynem77.bscmail4.model.response.ShiftTemplateResponse;
 import io.github.waynem77.bscmail4.model.response.ShiftTemplatesResponse;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
 import java.util.Optional;
@@ -32,36 +26,13 @@ import static org.hamcrest.MatcherAssert.assertThat;
  * Provides integration tests for {@link ShiftTemplateController}.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class ShiftTemplateControllerIT
+class ShiftTemplateControllerIT extends BaseIT
 {
-    @LocalServerPort
-    String port;
-
-    @Autowired
-    private TestRestTemplate restTemplate;
-
-    @Autowired
-    JdbcTemplate jdbcTemplate;
-
     @Autowired
     PermissionRepository permissionRepository;
 
     @Autowired
     ShiftTemplateRepository shiftTemplateRepository;
-
-    private DbCleaner dbCleaner;
-
-    @BeforeEach
-    public void setup()
-    {
-        dbCleaner = new DbCleaner(jdbcTemplate);
-    }
-
-    @AfterEach
-    public void cleanup()
-    {
-        dbCleaner.clean();
-    }
 
     @Test
     public void createShiftTemplateCreatesAShiftTemplate()
@@ -534,16 +505,6 @@ class ShiftTemplateControllerIT
         assertThat(page2.getPageInfo().isLast(), equalTo(true));
         assertThat(page2.getContent(), equalTo(List.of(
                 shiftTemplateResponses.get(2))));
-    }
-
-    private String url(String endpoint)
-    {
-        return "http://localhost:" + port + endpoint;
-    }
-
-    private <T> void addDbCleanup(String table, T id)
-    {
-        dbCleaner.addCleanup(table, id);
     }
 
     private ShiftTemplate createShiftTemplate()
