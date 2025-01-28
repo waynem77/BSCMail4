@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
@@ -18,7 +19,6 @@ public abstract class BaseIT
     @LocalServerPort
     protected String port;
 
-    @Autowired
     protected TestRestTemplate restTemplate;
 
     @Autowired
@@ -30,6 +30,10 @@ public abstract class BaseIT
     public void setupForBaseIT()
     {
         dbCleaner = new DbCleaner(jdbcTemplate);
+
+        // This creates a TestRestTemplate capable of issuing PATCH requests
+        restTemplate = new TestRestTemplate();
+        restTemplate.getRestTemplate().setRequestFactory(new HttpComponentsClientHttpRequestFactory());
     }
 
     @AfterEach

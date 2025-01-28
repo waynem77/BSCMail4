@@ -40,6 +40,31 @@ public class TestUtils
     }
 
     /**
+     * Returns a randomly-generated string ending with the given suffix.
+     *
+     * @param suffix the suffix; may not be null
+     * @return a randomly-generated string ending with the given suffix
+     * @throws NullPointerException if suffix is null
+     */
+    public static String randomStringWithSuffix(@NonNull String suffix)
+    {
+        return randomString() + "-" + suffix;
+    }
+
+    /**
+     * Returns a randomly-generated string containing the contents within it.
+     * @param contents the contents; may not be null
+     * @return a randomly-generated string containing the contents
+     * @throws NullPointerException if contents is null
+     */
+    public static String randomStringContaining(@NonNull String contents)
+    {
+        String randomString = randomString();
+        int insertionPoint = random.nextInt(randomString.length());
+        return String.format("%s-%s-%s", randomString.substring(0, insertionPoint), contents, randomString.substring(insertionPoint));
+    }
+
+    /**
      * Returns a randomly-generated long integer.
      *
      * @return a randomly-generated long integer

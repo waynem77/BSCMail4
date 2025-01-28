@@ -35,7 +35,7 @@ import java.util.List;
  * </dl>
  * <p>
  * In the case where multiple properties have been set, the filter performs a Boolean AND operation. For example, if
- * active is set to true and permissionIds is set to "marvin", the filter will select all Person objects whose active
+ * active is set to true and nameLike is set to "marvin", the filter will select all Person objects whose active
  * property is true and whose names match the string "marvin".
  */
 @Data

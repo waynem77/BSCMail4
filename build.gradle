@@ -39,6 +39,7 @@ dependencies {
     implementation "org.springframework:spring-context:${springContextVersion}"
     implementation "org.xerial:sqlite-jdbc:${sqliteVersion}"
     implementation "org.hibernate.orm:hibernate-community-dialects:${hibernateOrmVersion}"    // Needed for SQLite
+    implementation 'org.apache.httpcomponents.client5:httpclient5:5.4.2'    // Needed for PATCH requests
     testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
     testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${jupiterVersion}"
