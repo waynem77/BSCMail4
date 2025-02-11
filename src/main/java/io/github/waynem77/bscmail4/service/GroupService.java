@@ -5,12 +5,15 @@ import io.github.waynem77.bscmail4.exception.NotFoundException;
 import io.github.waynem77.bscmail4.model.UpdateAction;
 import io.github.waynem77.bscmail4.model.entity.Group;
 import io.github.waynem77.bscmail4.model.entity.Permission;
+import io.github.waynem77.bscmail4.model.entity.Person;
 import io.github.waynem77.bscmail4.model.repository.GroupRepository;
 import io.github.waynem77.bscmail4.model.repository.PermissionRepository;
+import io.github.waynem77.bscmail4.model.repository.PersonRepository;
 import io.github.waynem77.bscmail4.model.request.CreateOrUpdateGroupRequest;
 import io.github.waynem77.bscmail4.model.request.UpdatePermissionsRequest;
 import io.github.waynem77.bscmail4.model.response.GroupResponse;
 import io.github.waynem77.bscmail4.model.response.GroupsResponse;
+import io.github.waynem77.bscmail4.model.response.PermissionResponse;
 import io.github.waynem77.bscmail4.model.specification.GroupFilter;
 import io.github.waynem77.bscmail4.model.specification.SortDirection;
 import lombok.NonNull;
@@ -23,10 +26,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Performs database operations on {@link io.github.waynem77.bscmail4.model.entity.Group}s.
@@ -40,6 +40,8 @@ public class GroupService
     private final GroupRepository groupRepository;
     @Autowired
     private final PermissionRepository permissionRepository;
+    @Autowired
+    private final PersonRepository personRepository;
 
     /**
      * Creates a new Group from the given CreateOrUpdateGroupRequest and stores it in the database.
@@ -60,7 +62,7 @@ public class GroupService
             group.setName(request.getName());
             group = groupRepository.save(group);
 
-            return GroupResponse.fromGroup(group);
+            return makeGroupResponseFromGroup(group);
         }
         catch (JpaSystemException e)
         {
@@ -85,7 +87,7 @@ public class GroupService
                     log.error("Group not found. id={}", id);
                     return new NotFoundException("Group not found.");
                 });
-        return GroupResponse.fromGroup(group);
+        return makeGroupResponseFromGroup(group);
     }
 
     /**
@@ -119,7 +121,7 @@ public class GroupService
 
         Pageable pageable = PageRequest.of(page, size, direction.getSpringDirection(), "name");
         Specification<Group> specification = filter.toSpecification();
-        return new GroupsResponse(groupRepository.findAll(specification, pageable).map(GroupResponse::fromGroup));
+        return new GroupsResponse(groupRepository.findAll(specification, pageable).map(this::makeGroupResponseFromGroup));
     }
 
     /**
@@ -181,7 +183,32 @@ public class GroupService
         group.setPermissions(combinedPermissions);
         group = groupRepository.save(group);
 
-        return GroupResponse.fromGroup(group);
+        return makeGroupResponseFromGroup(group);
+    }
+
+    /**
+     * Creates a GroupResponse from a Group
+     * @param group the group; may not be null
+     * @return a GroupResponse equivalent to the Group
+     */
+    public GroupResponse makeGroupResponseFromGroup(Group group)
+    {
+        List<Person> people = personRepository.findAllByGroupId(group.getId());
+
+        GroupResponse response = new GroupResponse();
+        response.setId(group.getId());
+        response.setName(group.getName());
+        response.setMemberCount((long)people.size());
+        response.setActiveMemberCount(people.stream().filter(Person::getActive).count());
+        response.setPermissions(group.getPermissions() != null ?
+                group.getPermissions().stream()
+                        .map(PermissionResponse::fromPermission)
+                        .sorted(Comparator.comparing(PermissionResponse::getName))
+                        .toList() :
+                Collections.emptyList());
+        response.setMessages(Collections.emptyList());
+        return response;
+
     }
 
     /**

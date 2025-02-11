@@ -2,10 +2,15 @@ package io.github.waynem77.bscmail4.service;
 
 import io.github.waynem77.bscmail4.exception.BadRequestException;
 import io.github.waynem77.bscmail4.exception.NotFoundException;
+import io.github.waynem77.bscmail4.model.UpdateAction;
+import io.github.waynem77.bscmail4.model.entity.Group;
 import io.github.waynem77.bscmail4.model.entity.Person;
+import io.github.waynem77.bscmail4.model.repository.GroupRepository;
 import io.github.waynem77.bscmail4.model.repository.PermissionRepository;
 import io.github.waynem77.bscmail4.model.repository.PersonRepository;
 import io.github.waynem77.bscmail4.model.request.CreateOrUpdatePersonRequest;
+import io.github.waynem77.bscmail4.model.request.UpdateGroupsRequest;
+import io.github.waynem77.bscmail4.model.response.GroupResponse;
 import io.github.waynem77.bscmail4.model.response.PeopleResponse;
 import io.github.waynem77.bscmail4.model.response.PermissionResponse;
 import io.github.waynem77.bscmail4.model.response.PersonResponse;
@@ -20,8 +25,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.util.Comparator;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Stream;
 
 /**
  * Provides database operations on {@link Person} objects.
@@ -32,9 +37,13 @@ import java.util.Optional;
 public class PersonService
 {
     @Autowired
+    private final GroupService groupService;
+    @Autowired
     private final PersonRepository personRepository;
     @Autowired
     private final PermissionRepository permissionRepository;
+    @Autowired
+    private final GroupRepository groupRepository;
 
     /**
      * Returns all Person objects matching the given filter, in ascending order by name, by page.
@@ -51,7 +60,7 @@ public class PersonService
         Pageable pageable = PageRequest.of(page, size, Sort.Direction.ASC, "name");
 
         Specification<Person> specification = filter.toSpecification();
-        return new PeopleResponse(personRepository.findAll(specification, pageable).map(PersonResponse::fromPerson));
+        return new PeopleResponse(personRepository.findAll(specification, pageable).map(this::makePersonResponseFromPerson));
     }
 
     /**
@@ -74,7 +83,7 @@ public class PersonService
         person.setActive(request.getActive());
         person = personRepository.save(person);
 
-        return createResponseFromPerson(person);
+        return makePersonResponseFromPerson(person);
     }
 
     /**
@@ -107,7 +116,7 @@ public class PersonService
         person.setActive(request.getActive());
         person = personRepository.save(person);
 
-        return createResponseFromPerson(person);
+        return makePersonResponseFromPerson(person);
     }
 
     /**
@@ -120,6 +129,67 @@ public class PersonService
         log.info("Deleting person. id={}", id);
 
         personRepository.deleteById(id);
+    }
+    /**
+     * Adds or removes the given Groups to the given Person and returns a corresponding PersonResponse.
+     *
+     * @param personId the Person id; may not be null
+     * @param request the request containing the Group ids; may not be null
+     * @return a PersonResponse representing the updated Person
+     * @throws NullPointerException if either argument is null
+     * @throws NotFoundException    if personId is invalid
+     * @throws BadRequestException  if any id in groupIds is invalid
+     */
+    public PersonResponse updateGroups(@NonNull Long personId, @NonNull UpdateGroupsRequest request)
+    {
+        log.info("Adding groups to person. personId={}, request={}", personId, request);
+
+        UpdateAction action = UpdateAction.fromValue(request.getAction());
+        if (action == null)
+        {
+            log.error("Invalid request; action is invalid. action={}", request.getAction());
+            throw new BadRequestException("Invalid request.");
+        }
+
+        List<Long> groupIds = request.getGroupIds();
+        if (groupIds == null)
+        {
+            log.error("Invalid request; groupIds is null.");
+            throw new BadRequestException("Invalid request.");
+        }
+        for (Long id : groupIds)
+        {
+            if (!groupRepository.existsById(id))
+            {
+                log.error("Group does not exist. id={}", id);
+                throw new BadRequestException("Group does not exist.");
+            }
+        }
+
+        Person person = personRepository.findById(personId)
+                .orElseThrow(() -> {
+                    log.error("Person does not exist. personId={}", personId);
+                    return new NotFoundException("Person does not exist.");
+                });
+        List<Group> oldGroups = person.getGroups() != null ?
+                person.getGroups() :
+                Collections.emptyList();
+        List<Group> requestedGroups = groupRepository.findAllByIdIn(groupIds);
+
+        Set<Group> combinedGroups = new HashSet<>(oldGroups);
+        if (action == UpdateAction.ADD)
+        {
+            combinedGroups.addAll(requestedGroups);
+        }
+        else if (action == UpdateAction.REMOVE)
+        {
+            combinedGroups.removeAll(requestedGroups);
+        }
+
+        person.setGroups(new ArrayList<>(combinedGroups));
+        person = personRepository.save(person);
+
+        return makePersonResponseFromPerson(person);
     }
 
     /**
@@ -154,7 +224,7 @@ public class PersonService
             log.error("Unable to find person. id={}", id);
             return new NotFoundException("Unable to find person");
         });
-        return createResponseFromPerson(person);
+        return makePersonResponseFromPerson(person);
     }
 
     /**
@@ -163,7 +233,7 @@ public class PersonService
      * @param person the Person object
      * @return the PersonResponse object
      */
-    private PersonResponse createResponseFromPerson(@NonNull Person person)
+    public PersonResponse makePersonResponseFromPerson(@NonNull Person person)
     {
         PersonResponse response = new PersonResponse();
         response.setId(person.getId());
@@ -171,6 +241,10 @@ public class PersonService
         response.setEmailAddress(person.getEmailAddress());
         response.setPhone(person.getPhone());
         response.setPermissions(person.getPermissions().stream().map(PermissionResponse::fromPermission).sorted(Comparator.comparing(PermissionResponse::getName)).toList());
+        response.setGroups((person.getGroups() != null ? person.getGroups().stream() : Stream.<Group>empty())
+                .map(groupService::makeGroupResponseFromGroup)
+                .sorted(Comparator.comparing(GroupResponse::getName))
+                .toList());
         response.setActive(person.getActive());
 
         return response;

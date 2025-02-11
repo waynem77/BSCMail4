@@ -3,6 +3,7 @@ package io.github.waynem77.bscmail4.model.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -23,10 +24,7 @@ public class Group
     @Column(name = "name", columnDefinition = "TEXT", nullable = false, unique = true)
     private String name;
 
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-            name = "group_person",
-            joinColumns = @JoinColumn(name = "person_id"), inverseJoinColumns = @JoinColumn(name = "group_id"))
+    @Transient
     private List<Person> people;
 
 

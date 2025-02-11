@@ -214,8 +214,8 @@ class GroupControllerIT extends BaseIT
     public void deleteGroupIsIdempotent()
     {
         List<Group> groups = List.of(
-                createGroup(Collections.emptySet(), Collections.emptyList()),
-                createGroup(Collections.emptySet(), Collections.emptyList()));
+                createGroup(),
+                createGroup());
 
         ResponseEntity<Void> responseEntityForExistingGroup = restTemplate.exchange(
                 url("/api/group/{groupId}"),
@@ -591,7 +591,7 @@ class GroupControllerIT extends BaseIT
     @Test
     public void updatePermissionsReturnsBadRequestWhenPermissionIdsIsNull()
     {
-        Group group = createGroup(Collections.emptySet(), Collections.emptyList());
+        Group group = createGroup();
         Long groupId = group.getId();
 
         UpdatePermissionsRequest request = new UpdatePermissionsRequest();
@@ -613,7 +613,7 @@ class GroupControllerIT extends BaseIT
         List<Permission> permissions = List.of(
                 createPermission(),
                 createPermission());
-        Group group = createGroup(Collections.emptySet(), Collections.emptyList());
+        Group group = createGroup();
         Long groupId = group.getId();
 
         UpdatePermissionsRequest request = new UpdatePermissionsRequest();
@@ -634,7 +634,7 @@ class GroupControllerIT extends BaseIT
     {
         Permission permission = createPermission();
 
-        Group group = createGroup(Collections.emptySet(), Collections.emptyList());
+        Group group = createGroup();
         Long groupId = group.getId();
 
         UpdatePermissionsRequest request = new UpdatePermissionsRequest();
@@ -655,7 +655,7 @@ class GroupControllerIT extends BaseIT
     {
         Permission permission = createPermission();
 
-        Group group = createGroup(Collections.emptySet(), Collections.emptyList());
+        Group group = createGroup();
         Long groupId = group.getId();
 
         UpdatePermissionsRequest request = new UpdatePermissionsRequest();
@@ -680,7 +680,7 @@ class GroupControllerIT extends BaseIT
                 createPermission(),
                 createPermission(),
                 createPermission());
-        Group group = createGroup(Collections.emptySet(), Collections.emptyList());
+        Group group = createGroup();
         Long groupId = group.getId();
 
         UpdatePermissionsRequest requestForGroupWithNoPermissions = new UpdatePermissionsRequest();
@@ -893,6 +893,11 @@ class GroupControllerIT extends BaseIT
         addDbCleanup("person", person.getId());
 
         return person;
+    }
+
+    private Group createGroup()
+    {
+        return createGroup(randomString(), Collections.emptySet(), Collections.emptyList());
     }
 
     private Group createGroup(Set<Permission> permissions, List<Person> people)

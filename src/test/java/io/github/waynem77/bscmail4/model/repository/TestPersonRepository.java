@@ -9,15 +9,19 @@ import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A database repository for {@link Person} objects.
  */
-public interface PersonRepository extends JpaRepository<Person, Long>,
+public interface TestPersonRepository extends JpaRepository<Person, Long>,
         PagingAndSortingRepository<Person, Long>,
         JpaSpecificationExecutor<Person>
 {
-//    @Query("select distinct p from Person p join Group g where g member of p.groups and g.id = :id")
-    @Query(value = "select * from person p inner join person_group pg where pg.group_id = :id and pg.person_id = p.id", nativeQuery = true)
-    List<Person> findAllByGroupId(@Param("id") Long id);
+//    @Query("select p.groups from Person p join fetch p.groups where p.id = :id")
+    @Query("select p.groups from Person p where p.id = :id")
+    List<Group> getGroupsByPersonId(@Param("id") Long id);
+
+    @Query("select p from Person p join fetch p.groups join fetch p.groups where p.id = :id")
+    Optional<Person> eagerFindById(@Param("id") Long id);
 }

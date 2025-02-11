@@ -4,11 +4,6 @@ CREATE TABLE group_permission
     permission_id bigint NOT NULL,
     PRIMARY KEY (group_id, permission_id)
 );
-CREATE TABLE group_person
-(
-    group_id  bigint NOT NULL,
-    person_id bigint NOT NULL
-);
 CREATE TABLE groupp
 (
     id   bigint NOT NULL,
@@ -41,6 +36,11 @@ CREATE TABLE person
     name          TEXT    NOT NULL,
     phone         TEXT,
     PRIMARY KEY (id)
+);
+CREATE TABLE person_group
+(
+    group_id  bigint NOT NULL,
+    person_id bigint NOT NULL
 );
 CREATE TABLE person_permissions
 (

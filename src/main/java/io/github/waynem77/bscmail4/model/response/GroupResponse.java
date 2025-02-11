@@ -2,6 +2,7 @@ package io.github.waynem77.bscmail4.model.response;
 
 import io.github.waynem77.bscmail4.model.entity.Group;
 import io.github.waynem77.bscmail4.model.entity.Person;
+import io.github.waynem77.bscmail4.model.repository.PersonRepository;
 import lombok.Data;
 import lombok.NonNull;
 
@@ -21,31 +22,4 @@ public class GroupResponse
     private Long activeMemberCount;
     private List<PermissionResponse> permissions;
     private List<String> messages;
-
-    /**
-     * Creates a GroupResponse from a Group.
-     *
-     * @param group the group
-     * @return an equivalent GroupResponse
-     */
-    public static GroupResponse fromGroup(@NonNull Group group)
-    {
-        GroupResponse response = new GroupResponse();
-        response.setId(group.getId());
-        response.setName(group.getName());
-        response.setMemberCount(group.getPeople() != null ?
-                group.getPeople().size() :
-                0L);
-        response.setActiveMemberCount(group.getPeople() != null ?
-                group.getPeople().stream().filter(Person::getActive).count() :
-                0L);
-        response.setPermissions(group.getPermissions() != null ?
-                group.getPermissions().stream()
-                        .map(PermissionResponse::fromPermission)
-                        .sorted(Comparator.comparing(PermissionResponse::getName))
-                        .toList() :
-                Collections.emptyList());
-        response.setMessages(Collections.emptyList());
-        return response;
-    }
 }

@@ -1,10 +1,14 @@
 package io.github.waynem77.bscmail4.controller;
 
+import io.github.waynem77.bscmail4.model.entity.Group;
 import io.github.waynem77.bscmail4.model.entity.Permission;
 import io.github.waynem77.bscmail4.model.entity.Person;
+import io.github.waynem77.bscmail4.model.repository.GroupRepository;
 import io.github.waynem77.bscmail4.model.repository.PermissionRepository;
-import io.github.waynem77.bscmail4.model.repository.PersonRepository;
+import io.github.waynem77.bscmail4.model.repository.TestPersonRepository;
 import io.github.waynem77.bscmail4.model.request.CreateOrUpdatePersonRequest;
+import io.github.waynem77.bscmail4.model.request.UpdateGroupsRequest;
+import io.github.waynem77.bscmail4.model.response.GroupResponse;
 import io.github.waynem77.bscmail4.model.response.PeopleResponse;
 import io.github.waynem77.bscmail4.model.response.PermissionResponse;
 import io.github.waynem77.bscmail4.model.response.PersonResponse;
@@ -38,7 +42,10 @@ class PersonControllerIT extends BaseIT
     private PermissionRepository permissionRepository;
 
     @Autowired
-    private PersonRepository personRepository;
+    private GroupRepository groupRepository;
+
+    @Autowired
+    private TestPersonRepository personRepository;
 
     private List<Permission> permissions;
 
@@ -584,6 +591,279 @@ class PersonControllerIT extends BaseIT
         assertThat(responseEntity.getStatusCode().is2xxSuccessful(), equalTo(true));
     }
 
+    @Test
+    public void updateGroupsReturnsNotFoundWhenPersonDoesNotExist()
+    {
+        Group group = createGroup();
+        Long personId = randomLong();
+
+        UpdateGroupsRequest request = new UpdateGroupsRequest();
+        request.setAction("add");
+        request.setGroupIds(List.of(group.getId()));
+        HttpEntity<UpdateGroupsRequest> httpEntity = new HttpEntity<>(request);
+        ResponseEntity<PersonResponse> responseEntity = restTemplate.exchange(
+                url("/api/person/{personId}/group"),
+                HttpMethod.PATCH,
+                httpEntity,
+                PersonResponse.class,
+                personId);
+        assertThat(responseEntity, notNullValue());
+        assertThat(responseEntity.getStatusCode(), equalTo(HttpStatus.NOT_FOUND));
+    }
+
+    @Test
+    public void updateGroupsReturnsBadRequestWhenGroupIdsIsNull()
+    {
+        Person person = createPerson();
+        Long personId = person.getId();
+
+        UpdateGroupsRequest request = new UpdateGroupsRequest();
+        request.setAction("add");
+        HttpEntity<UpdateGroupsRequest> httpEntity = new HttpEntity<>(request);
+        ResponseEntity<PersonResponse> responseEntity = restTemplate.exchange(
+                url("/api/person/{personId}/group"),
+                HttpMethod.PATCH,
+                httpEntity,
+                PersonResponse.class,
+                personId);
+        assertThat(responseEntity, notNullValue());
+        assertThat(responseEntity.getStatusCode(), equalTo(HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    public void updateGroupsReturnsBadRequestWhenGroupIdDoesNotExist()
+    {
+        List<Group> groups = List.of(
+                createGroup(),
+                createGroup());
+        Person person = createPerson();
+        Long personId = person.getId();
+
+        UpdateGroupsRequest request = new UpdateGroupsRequest();
+        request.setGroupIds(List.of(groups.get(0).getId(), randomLong(), groups.get(1).getId()));
+        HttpEntity<UpdateGroupsRequest> httpEntity = new HttpEntity<>(request);
+        ResponseEntity<PersonResponse> responseEntity = restTemplate.exchange(
+                url("/api/person/{personId}/group"),
+                HttpMethod.PATCH,
+                httpEntity,
+                PersonResponse.class,
+                personId);
+        assertThat(responseEntity, notNullValue());
+        assertThat(responseEntity.getStatusCode(), equalTo(HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    public void updateGroupsReturnsBadRequestWhenActionIsNull()
+    {
+        Group group = createGroup();
+
+        Person person = createPerson();
+        Long personId = person.getId();
+
+        UpdateGroupsRequest request = new UpdateGroupsRequest();
+        request.setGroupIds(List.of(group.getId()));
+        HttpEntity<UpdateGroupsRequest> httpEntity = new HttpEntity<>(request);
+        ResponseEntity<PersonResponse> responseEntity = restTemplate.exchange(
+                url("/api/person/{personId}/group"),
+                HttpMethod.PATCH,
+                httpEntity,
+                PersonResponse.class,
+                personId);
+        assertThat(responseEntity, notNullValue());
+        assertThat(responseEntity.getStatusCode(), equalTo(HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    public void updateGroupsReturnsBadRequestWhenActionIsInvalid()
+    {
+        Permission permission = createPermission();
+
+        Person person = createPerson();
+        Long personId = person.getId();
+
+        UpdateGroupsRequest request = new UpdateGroupsRequest();
+        request.setAction(randomString());
+        request.setGroupIds(List.of(permission.getId()));
+        HttpEntity<UpdateGroupsRequest> httpEntity = new HttpEntity<>(request);
+        ResponseEntity<PersonResponse> responseEntity = restTemplate.exchange(
+                url("/api/person/{personId}/group"),
+                HttpMethod.PATCH,
+                httpEntity,
+                PersonResponse.class,
+                personId);
+        assertThat(responseEntity, notNullValue());
+        assertThat(responseEntity.getStatusCode(), equalTo(HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    public void updateGroupsAddsGroups()
+    {
+        List<Group> groups = List.of(
+                createGroup(),
+                createGroup(),
+                createGroup(),
+                createGroup());
+        Person person = createPerson();
+        Long personId = person.getId();
+
+        UpdateGroupsRequest requestForPersonWithNoGroups = new UpdateGroupsRequest();
+        requestForPersonWithNoGroups.setAction("add");
+        requestForPersonWithNoGroups.setGroupIds(
+                List.of(groups.get(0).getId(), groups.get(1).getId()));
+        HttpEntity<UpdateGroupsRequest> httpEntityForPersonWithNoGroups =
+                new HttpEntity<>(requestForPersonWithNoGroups);
+        ResponseEntity<PersonResponse> responseEntityForPersonWithNoGroups = restTemplate.exchange(
+                url("/api/person/{personId}/group"),
+                HttpMethod.PATCH,
+                httpEntityForPersonWithNoGroups,
+                PersonResponse.class,
+                personId);
+        assertThat(responseEntityForPersonWithNoGroups, notNullValue());
+        assertThat(responseEntityForPersonWithNoGroups.getStatusCode().is2xxSuccessful(), equalTo(true));
+        PersonResponse expectedResponseForPersonWithNoGroups = getPersonResponseFromPersonAndGroups(
+                person,
+                List.of(groups.get(0), groups.get(1)));
+        assertThat(
+                responseEntityForPersonWithNoGroups.getBody(),
+                equalTo(expectedResponseForPersonWithNoGroups));
+
+        Person personInDbAfterFirstRequest = personRepository.eagerFindById(personId).get();
+        assertThat(
+                personInDbAfterFirstRequest.getGroups(),
+                equalToUnordered(List.of(groups.get(0), groups.get(1))));
+
+        UpdateGroupsRequest requestForPersonWithGroups = new UpdateGroupsRequest();
+        requestForPersonWithGroups.setAction("add");
+        requestForPersonWithGroups.setGroupIds(List.of(
+                groups.get(2).getId(),
+                groups.get(3).getId()));
+        HttpEntity<UpdateGroupsRequest> httpEntityForPersonWithGroups =
+                new HttpEntity<>(requestForPersonWithGroups);
+        ResponseEntity<PersonResponse> responseEntityForPersonWithGroup = restTemplate.exchange(
+                url("/api/person/{personId}/group"),
+                HttpMethod.PATCH,
+                httpEntityForPersonWithGroups,
+                PersonResponse.class,
+                personId);
+        assertThat(responseEntityForPersonWithGroup, notNullValue());
+        assertThat(responseEntityForPersonWithGroup.getStatusCode().is2xxSuccessful(), equalTo(true));
+        PersonResponse expectedResponseForPersonWithGroups = getPersonResponseFromPersonAndGroups(person, groups);
+        assertThat(responseEntityForPersonWithGroup.getBody(), equalTo(expectedResponseForPersonWithGroups));
+
+        Person personInDbAfterSecondRequest = personRepository.eagerFindById(personId).get();
+        assertThat(
+                personInDbAfterSecondRequest.getGroups(),
+                equalToUnordered(List.of(
+                        groups.get(0),
+                        groups.get(1),
+                        groups.get(2),
+                        groups.get(3))));
+    }
+    @Test
+    public void updateGroupsIgnoresDuplicatesDuringAdd()
+    {
+        List<Group> groups = List.of(
+                createGroup(),
+                createGroup(),
+                createGroup());
+        Person person = createPerson(
+                randomString(),
+                Collections.emptySet(),
+                List.of(groups.get(0)),
+                true);
+        Long personId = person.getId();
+
+        UpdateGroupsRequest request = new UpdateGroupsRequest();
+        request.setAction("add");
+        request.setGroupIds(List.of(
+                groups.get(0).getId(),      // duplicates existing group
+                groups.get(1).getId(),
+                groups.get(1).getId()));    // duplicates another group in request
+        HttpEntity<UpdateGroupsRequest> httpEntity = new HttpEntity<>(request);
+        ResponseEntity<PersonResponse> responseEntity = restTemplate.exchange(
+                url("/api/person/{personId}/group"),
+                HttpMethod.PATCH,
+                httpEntity,
+                PersonResponse.class,
+                personId);
+        assertThat(responseEntity, notNullValue());
+        assertThat(responseEntity.getStatusCode().is2xxSuccessful(), equalTo(true));
+        PersonResponse expectedResponse = getPersonResponseFromPersonAndGroups(
+                person,
+                List.of(groups.get(0), groups.get(1)));
+        assertThat(responseEntity.getBody(), equalTo(expectedResponse));
+
+        Person personInDbAfterFirstRequest = personRepository.eagerFindById(personId).get();
+        assertThat(
+                personInDbAfterFirstRequest.getGroups(),
+                equalToUnordered(List.of(groups.get(0), groups.get(1))));
+    }
+
+    @Test
+    public void updateGroupsRemovesGroups()
+    {
+        List<Group> groups = List.of(
+                createGroup(),
+                createGroup(),
+                createGroup(),
+                createGroup());
+        Person person = createPerson(randomString(), Collections.emptySet(), groups, true);
+        Long personId = person.getId();
+
+        UpdateGroupsRequest request = new UpdateGroupsRequest();
+        request.setAction("remove");
+        request.setGroupIds(List.of(groups.get(0).getId(), groups.get(1).getId()));
+        HttpEntity<UpdateGroupsRequest> httpEntity = new HttpEntity<>(request);
+        ResponseEntity<PersonResponse> responseEntity = restTemplate.exchange(
+                url("/api/person/{personId}/group"),
+                HttpMethod.PATCH,
+                httpEntity,
+                PersonResponse.class,
+                personId);
+        assertThat(responseEntity, notNullValue());
+        assertThat(responseEntity.getStatusCode().is2xxSuccessful(), equalTo(true));
+        PersonResponse expectedResponse = getPersonResponseFromPersonAndGroups(
+                person,
+                List.of(groups.get(2), groups.get(3)));
+        assertThat(responseEntity.getBody(), equalTo(expectedResponse));
+    }
+
+    @Test
+    public void updateGroupsIgnoresDuplicatesInRequestAndPermissionsNotInGroupDuringRemove()
+    {
+        List<Group> groups = List.of(
+                createGroup(),
+                createGroup(),
+                createGroup());
+        Person person = createPerson(
+                randomString(),
+                Collections.emptySet(),
+                List.of(groups.get(0), groups.get(1)),
+                true);
+        Long personId = person.getId();
+
+        UpdateGroupsRequest request = new UpdateGroupsRequest();
+        request.setAction("remove");
+        request.setGroupIds(List.of(
+                groups.get(0).getId(),
+                groups.get(0).getId(),      // duplicates another group in request
+                groups.get(2).getId()));    // permission not in person
+        HttpEntity<UpdateGroupsRequest> httpEntity = new HttpEntity<>(request);
+        ResponseEntity<PersonResponse> responseEntity = restTemplate.exchange(
+                url("/api/person/{personId}/group"),
+                HttpMethod.PATCH,
+                httpEntity,
+                PersonResponse.class,
+                personId);
+        assertThat(responseEntity, notNullValue());
+        assertThat(responseEntity.getStatusCode().is2xxSuccessful(), equalTo(true));
+        PersonResponse expectedResponse = getPersonResponseFromPersonAndGroups(person, List.of(groups.get(1)));
+        assertThat(responseEntity.getBody(), equalTo(expectedResponse));
+
+        Person personInDb = personRepository.eagerFindById(personId).get();
+        assertThat(personInDb.getGroups(), equalToUnordered(List.of(groups.get(1))));
+    }
+
     static Stream<Arguments> createPersonBadRequests()
     {
         return Stream.of(
@@ -629,22 +909,42 @@ class PersonControllerIT extends BaseIT
     {
         return createPermission(randomStringWithPrefix(prefix));
     }
+    private Group createGroup()
+    {
+        return createGroup(randomString(), Set.of(createPermission()));
+    }
+
+    private Group createGroup(String name, Set<Permission> permissions)
+    {
+        Group group = new Group();
+        group.setName(name);
+        group.setPermissions(permissions);
+        group = groupRepository.save(group);
+        return group;
+    }
 
     private Person createPerson()
     {
         return createPerson(
                 randomString(),
                 permissions.stream().filter(permission -> randomBoolean()).collect(Collectors.toSet()),
+                Collections.emptyList(),
                 randomBoolean());
     }
 
     private Person createPerson(String name, Set<Permission> permissions, Boolean active)
+    {
+        return createPerson(name, permissions, Collections.emptyList(), active);
+    }
+
+    private Person createPerson(String name, Set<Permission> permissions, List<Group> groups, Boolean active)
     {
         Person person = new Person();
         person.setName(name);
         person.setEmailAddress(randomString());
         person.setPhone(randomString());
         person.setPermissions(permissions);
+        person.setGroups(groups);
         person.setActive(active);
         person = personRepository.save(person);
         addDbCleanup("person", person.getId());
@@ -673,10 +973,43 @@ class PersonControllerIT extends BaseIT
                 .map(this::getPermissionResponseFromPermission)
                 .sorted(Comparator.comparing(PermissionResponse::getName))
                 .toList());
+        response.setGroups(Collections.emptyList());
         response.setActive(person.getActive());
 
         return response;
     }
+
+    private PersonResponse getPersonResponseFromPersonAndGroups(Person person, Collection<Group> groups)
+    {
+        PersonResponse response = new PersonResponse();
+        response.setId(person.getId());
+        response.setName(person.getName());
+        response.setEmailAddress(person.getEmailAddress());
+        response.setPhone(person.getPhone());
+        response.setPermissions(person.getPermissions().stream().map(this::getPermissionResponseFromPermission).sorted(Comparator.comparing(PermissionResponse::getName)).toList());
+        response.setGroups(groups.stream().map(this::getGroupResponseFromGroup).sorted(Comparator.comparing(GroupResponse::getName)).toList());
+        response.setActive(person.getActive());
+
+        return response;
+    }
+
+    private GroupResponse getGroupResponseFromGroup(Group group)
+    {
+        GroupResponse response = new GroupResponse();
+        response.setId(group.getId());
+        response.setName(group.getName());
+        response.setMemberCount(group.getPeople() != null ? (long) group.getPeople().size() : 0L);
+        response.setActiveMemberCount(group.getPeople() != null ? group.getPeople().stream().filter(Person::getActive).count() : 0L);
+        response.setPermissions(
+                group.getPermissions().stream()
+                        .map(this::getPermissionResponseFromPermission)
+                        .sorted(Comparator.comparing(PermissionResponse::getName))
+                        .toList());
+        response.setMessages(Collections.emptyList());
+
+        return response;
+    }
+
 
     private void validatePersonResponse(PersonResponse response, Person person)
     {

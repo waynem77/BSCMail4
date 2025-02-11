@@ -3,6 +3,7 @@ package io.github.waynem77.bscmail4.model.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -32,4 +33,11 @@ public class Person
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable
     private Set<Permission> permissions;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "person_group",
+            joinColumns = @JoinColumn(name = "group_id"), inverseJoinColumns = @JoinColumn(name = "person_id"))
+    private List<Group> groups;
+
 }

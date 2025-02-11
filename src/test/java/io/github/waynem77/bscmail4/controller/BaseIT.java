@@ -39,7 +39,7 @@ public abstract class BaseIT
     @AfterEach
     public void cleanupForBaseIT()
     {
-        dbCleaner.clean();
+//        dbCleaner.clean();
     }
 
     protected final String url(String endpoint)

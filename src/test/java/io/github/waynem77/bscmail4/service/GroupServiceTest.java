@@ -8,6 +8,7 @@ import io.github.waynem77.bscmail4.model.entity.Permission;
 import io.github.waynem77.bscmail4.model.entity.Person;
 import io.github.waynem77.bscmail4.model.repository.GroupRepository;
 import io.github.waynem77.bscmail4.model.repository.PermissionRepository;
+import io.github.waynem77.bscmail4.model.repository.PersonRepository;
 import io.github.waynem77.bscmail4.model.request.CreateOrUpdateGroupRequest;
 import io.github.waynem77.bscmail4.model.request.UpdatePermissionsRequest;
 import io.github.waynem77.bscmail4.model.response.GroupResponse;
@@ -54,12 +55,14 @@ class GroupServiceTest
 {
     private GroupRepository groupRepository;
     private PermissionRepository permissionRepository;
+    private PersonRepository personRepository;
 
     @BeforeEach
     public void setup()
     {
         groupRepository = mock(GroupRepository.class);
         permissionRepository = mock(PermissionRepository.class);
+        mock(PersonRepository.class);
     }
 
     @Test
@@ -392,7 +395,8 @@ class GroupServiceTest
     {
         return new GroupService(
                 groupRepository,
-                permissionRepository);
+                permissionRepository,
+                personRepository);
     }
 
     private Permission createPermission()

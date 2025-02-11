@@ -1,5 +1,6 @@
 package io.github.waynem77.bscmail4;
 
+import com.jayway.jsonpath.TypeRef;
 import lombok.NonNull;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.CoreMatchers;
@@ -7,8 +8,11 @@ import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * A collection of test utilities.
@@ -84,21 +88,28 @@ public class TestUtils
         return random.nextBoolean();
     }
 
-    public static Matcher<Collection> equalToUnordered(Collection expected)
+    public static Matcher<Collection<?>> equalToUnordered(Collection<?> expected)
     {
-        if (expected == null)
-        {
-            return CoreMatchers.nullValue(Collection.class);
-        }
-
-        return new BaseMatcher<Collection>()
+        return new BaseMatcher<>()
         {
             @Override
             public boolean matches(Object actual)
             {
-                return (actual instanceof Collection) &&
-                        expected.containsAll((Collection)actual) &&
-                        ((Collection)actual).containsAll(expected);
+                if (expected == null)
+                {
+                    return actual == null;
+                }
+
+                if (!(actual instanceof Collection))
+                {
+                    return false;
+                }
+
+                Collection<Object> actualCollection = (Collection)actual;
+
+                Map<?, Long> expectedFrequencyMap = expected.stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+                Map<?, Long> actualFrequencyMap = actualCollection.stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+                return expectedFrequencyMap.equals(actualFrequencyMap);
             }
 
             @Override

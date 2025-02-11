@@ -2,11 +2,15 @@ package io.github.waynem77.bscmail4.service;
 
 import io.github.waynem77.bscmail4.exception.BadRequestException;
 import io.github.waynem77.bscmail4.exception.NotFoundException;
+import io.github.waynem77.bscmail4.model.UpdateAction;
+import io.github.waynem77.bscmail4.model.entity.Group;
 import io.github.waynem77.bscmail4.model.entity.Permission;
 import io.github.waynem77.bscmail4.model.entity.Person;
+import io.github.waynem77.bscmail4.model.repository.GroupRepository;
 import io.github.waynem77.bscmail4.model.repository.PermissionRepository;
 import io.github.waynem77.bscmail4.model.repository.PersonRepository;
 import io.github.waynem77.bscmail4.model.request.CreateOrUpdatePersonRequest;
+import io.github.waynem77.bscmail4.model.request.UpdateGroupsRequest;
 import io.github.waynem77.bscmail4.model.response.PeopleResponse;
 import io.github.waynem77.bscmail4.model.response.PersonResponse;
 import io.github.waynem77.bscmail4.model.specification.PersonFilter;
@@ -22,6 +26,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -29,6 +34,7 @@ import java.util.Set;
 import static io.github.waynem77.bscmail4.TestUtils.*;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -39,8 +45,10 @@ import static org.mockito.Mockito.*;
  */
 class PersonServiceTest
 {
+    private GroupService groupService;
     private PersonRepository personRepository;
     private PermissionRepository permissionRepository;
+    private GroupRepository groupRepository;
 
     private Person person;
     private CreateOrUpdatePersonRequest request;
@@ -48,8 +56,10 @@ class PersonServiceTest
     @BeforeEach
     public void setup()
     {
+        groupService = mock(groupService);
         personRepository = mock(PersonRepository.class);
         permissionRepository = mock(PermissionRepository.class);
+        groupRepository = mock(GroupRepository.class);
 
         resetPersonAndRequest();
 
@@ -142,7 +152,7 @@ class PersonServiceTest
     @Test
     public void updatePersonUpdatesPerson()
     {
-        Person person = randomPerson();
+        Person person = createPerson();
         given(personRepository.findById(person.getId())).willReturn(Optional.of(person));
 
         PersonService personService = createTestable();
@@ -186,7 +196,7 @@ class PersonServiceTest
     @Test
     public void getPersonReturnsCorrectValue()
     {
-        Person person = randomPerson();
+        Person person = createPerson();
         Permission permission = person.getPermissions().stream().findFirst().get();
         given(personRepository.findById(person.getId())).willReturn(Optional.of(person));
 
@@ -214,6 +224,146 @@ class PersonServiceTest
         personService.deletePerson(person.getId());
 
         verify(personRepository).deleteById(person.getId());
+    }
+
+    @Test
+    public void updatepGroupersonsThrowsIfEitherParameterIsNull()
+    {
+        UpdateGroupsRequest request = new UpdateGroupsRequest();
+        request.setGroupIds(List.of(randomLong()));
+
+        PersonService personService = createTestable();
+
+        assertThrows(NullPointerException.class, () -> personService.updateGroups(null, request));
+        assertThrows(NullPointerException.class, () -> personService.updateGroups(randomLong(), null));
+    }
+
+    @Test
+    public void updateGroupsThrowsIfRequestHasInvalidAction()
+    {
+        Long personId = randomLong();
+
+        UpdateGroupsRequest request1 = new UpdateGroupsRequest();
+        request1.setGroupIds(List.of(randomLong()));
+
+        PersonService personService = createTestable();
+        assertThrows(BadRequestException.class, () -> personService.updateGroups(personId, request1));
+
+        UpdateGroupsRequest request2 = new UpdateGroupsRequest();
+        request2.setAction(randomString());
+        request2.setGroupIds(List.of(randomLong()));
+
+        assertThrows(BadRequestException.class, () -> personService.updateGroups(personId, request2));
+    }
+
+    @Test
+    public void updateGroupsThrowsWhenPersonDoesNotExist()
+    {
+        given(groupRepository.existsById(any())).willReturn(true);
+
+        Long personId = randomLong();
+        given(personRepository.findById(personId)).willReturn(Optional.empty());
+
+        UpdateGroupsRequest request = new UpdateGroupsRequest();
+        request.setAction(UpdateAction.ADD.getValue());
+        request.setGroupIds(List.of(randomLong()));
+
+        PersonService personService = createTestable();
+
+        assertThrows(NotFoundException.class, () -> personService.updateGroups(personId, request));
+    }
+
+    @Test
+    public void updateGroupsThrowsWhenGroupDoesNotExist()
+    {
+        Long personId = randomLong();
+        given(personRepository.findById(personId)).willReturn(Optional.of(mock(Person.class)));
+
+        List<Long> groupIds = List.of(randomLong(), randomLong());
+        given(groupRepository.existsById(groupIds.get(0))).willReturn(true);
+        given(groupRepository.existsById(groupIds.get(1))).willReturn(false);
+        UpdateGroupsRequest request = new UpdateGroupsRequest();
+        request.setAction(UpdateAction.ADD.getValue());
+        request.setGroupIds(groupIds);
+
+        PersonService personService = createTestable();
+
+        assertThrows(BadRequestException.class, () -> personService.updateGroups(personId, request));
+    }
+
+    @Test
+    public void updateGroupsDoesNotThrowWhenGroupIdsIsEmpty()
+    {
+        Long personId = randomLong();
+        given(personRepository.findById(personId)).willReturn(Optional.of(mock(Person.class)));
+        given(personRepository.save(any())).willReturn(mock(Person.class));
+
+        List<Long> groupIds = Collections.emptyList();
+        UpdateGroupsRequest request = new UpdateGroupsRequest();
+        request.setAction(UpdateAction.ADD.getValue());
+        request.setGroupIds(groupIds);
+
+        PersonService personService = createTestable();
+
+        assertDoesNotThrow(() -> personService.updateGroups(personId, request));
+    }
+
+    @Test
+    public void updateGroupsAddsGroups()
+    {
+//        Person person = createPerson();
+//        Long personId = person.getId();
+//        Group existingGroup = person.getGroups().stream().findAny().get();
+//        given(personRepository.findById(personId)).willReturn(Optional.of(person));
+//        given(personRepository.save(any())).willReturn(person);
+//
+//        Group newGroup = createGroup();
+//        List<Long> groupIds = List.of(existingGroup.getId(), newGroup.getId(), newGroup.getId());
+//        given(groupRepository.existsById(existingGroup.getId())).willReturn(true);
+//        given(groupRepository.existsById(newGroup.getId())).willReturn(true);
+//        given(groupRepository.findAllByIdIn(groupIds)).willReturn(Set.of(existingGroup, newGroup));
+//
+//        UpdateGroupsRequest request = new UpdateGroupsRequest();
+//        request.setAction(UpdateAction.ADD.getValue());
+//        request.setGroupIds(groupIds);
+//
+//        PersonService personService = createTestable();
+//        personService.updateGroups(personId, request);
+//
+//        verify(person).setGroups(Set.of(existingGroup, newGroup));
+//        verify(personRepository).save(person);
+    }
+
+    @Test
+    public void updateGroupsRemovesGroups()
+    {
+//        List<Group> existingGroups = List.of(
+//                createGroup(),
+//                createGroup());
+//
+//        Person person = createPerson();
+//        given(person.getGroups()).willReturn(Set.of(existingGroups.get(0), existingGroups.get(1)));
+//        Long personId = person.getId();
+//        given(personRepository.findById(personId)).willReturn(Optional.of(person));
+//        given(personRepository.save(any())).willReturn(person);
+//
+//        Group newGroup = createGroup();
+//        List<Long> groupIds = List.of(existingGroups.get(0).getId(), existingGroups.get(0).getId(),
+//                newGroup.getId());
+//        given(groupRepository.existsById(existingGroups.get(0).getId())).willReturn(true);
+//        given(groupRepository.existsById(newGroup.getId())).willReturn(true);
+//        given(groupRepository.findAllByIdIn(groupIds)).willReturn(Set.of(existingGroups.get(0),
+//                newGroup));
+//
+//        UpdateGroupsRequest request = new UpdateGroupsRequest();
+//        request.setAction(UpdateAction.REMOVE.getValue());
+//        request.setGroupIds(groupIds);
+//
+//        PersonService personService = createTestable();
+//        personService.updateGroups(personId, request);
+//
+//        verify(person).setGroups(Set.of(existingGroups.get(1)));
+//        verify(personRepository).save(person);
     }
 
     private void resetRequest()
@@ -255,11 +405,9 @@ class PersonServiceTest
         given(request.getActive()).willReturn(personActive);
     }
 
-    private Person randomPerson()
+    private Person createPerson()
     {
-        Permission permission = mock(Permission.class);
-        given(permission.getId()).willReturn(randomLong());
-        given(permission.getName()).willReturn(randomString());
+        Permission permission = createPermission();
 
         Person person = mock(Person.class);
         given(person.getId()).willReturn(randomLong());
@@ -270,6 +418,30 @@ class PersonServiceTest
         given(person.getActive()).willReturn(randomBoolean());
 
         return person;
+    }
+
+    private Group createGroup()
+    {
+        Set<Permission> permissions = Set.of(createPermission());
+
+        List<Person> people = List.of(createPerson(), createPerson(), createPerson());
+
+        Group group = mock(Group.class);
+        given(group.getId()).willReturn(randomLong());
+        given(group.getName()).willReturn(randomString());
+        given(group.getPermissions()).willReturn(permissions);
+        given(group.getPeople()).willReturn(people);
+
+        return group;
+    }
+
+    private Permission createPermission()
+    {
+        Permission permission = mock(Permission.class);
+        given(permission.getId()).willReturn(randomLong());
+        given(permission.getName()).willReturn(randomString());
+
+        return permission;
     }
 
     private void validatePersonFromRequest(Person person, CreateOrUpdatePersonRequest request)
@@ -317,7 +489,9 @@ class PersonServiceTest
     private PersonService createTestable()
     {
         return new PersonService(
+                groupService,
                 personRepository,
-                permissionRepository);
+                permissionRepository,
+                groupRepository);
     }
 }

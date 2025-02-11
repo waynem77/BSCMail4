@@ -1,6 +1,7 @@
 package io.github.waynem77.bscmail4.controller;
 
 import io.github.waynem77.bscmail4.model.request.CreateOrUpdatePersonRequest;
+import io.github.waynem77.bscmail4.model.request.UpdateGroupsRequest;
 import io.github.waynem77.bscmail4.model.response.PeopleResponse;
 import io.github.waynem77.bscmail4.model.response.PersonResponse;
 import io.github.waynem77.bscmail4.model.specification.PersonFilter;
@@ -70,5 +71,13 @@ public class PersonController
             @PathVariable(name = "personId") Long personId)
     {
         personService.deletePerson(personId);
+    }
+
+    @PatchMapping("/api/person/{personId}/group")
+    public PersonResponse updateGroups(
+            @PathVariable(name = "personId") Long personId,
+            @RequestBody UpdateGroupsRequest request)
+    {
+        return personService.updateGroups(personId, request);
     }
 }
