@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Person Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sortable-header {
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease;
+        }
+        .sortable-header:hover {
+            background-color: rgba(255, 255, 255, 0.1) !important;
+        }
+        .sort-indicator {
+            opacity: 0.7;
+        }
+        .sort-indicator.active {
+            opacity: 1;
+        }
+        .clickable-badge {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .clickable-badge:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1><i class="fas fa-users"></i> Person Management</h1>
+                    <a href="/persons/new" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add New Person
+                    </a>
+                </div>
+
+                <!-- Flash Messages -->
+                <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle"></i>
+                    <span th:text="${successMessage}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span th:text="${errorMessage}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-filter"></i> Filter Options</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-4">
+                                <label for="textSearch" class="form-label">Text Search:</label>
+                                <input type="text" 
+                                       id="textSearch" 
+                                       class="form-control" 
+                                       th:value="${currentTextSearch ?: ''}"
+                                       placeholder="Search name, email, or phone..."
+                                       onkeypress="handleTextSearch(event)">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="activeFilter" class="form-label">Status:</label>
+                                <select id="activeFilter" class="form-select" onchange="changeActiveFilter(this.value)">
+                                    <option value="all" th:selected="${currentActive == 'all'}">All</option>
+                                    <option value="true" th:selected="${currentActive == 'true'}">Active</option>
+                                    <option value="false" th:selected="${currentActive == 'false'}">Inactive</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 text-md-end">
+                                <small class="text-muted">Filter by status or search text</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Persons Table -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-list"></i> All Persons</h5>
+                    </div>
+                    <div class="card-body">
+                        <div th:if="${#lists.isEmpty(persons)}" class="text-center py-4">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No persons found</h5>
+                            <p class="text-muted">Start by adding a new person to the system.</p>
+                            <a href="/persons/new" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Add First Person
+                            </a>
+                        </div>
+                        
+                        <div th:unless="${#lists.isEmpty(persons)}" class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>
+                                            <a th:href="@{/persons(sortBy='name', direction=${currentSortBy == 'name' && currentDirection == 'asc' ? 'desc' : 'asc'}, page=${currentPage}, size=${currentSize}, active=${currentActive}, textSearch=${currentTextSearch})}" 
+                                               class="text-white text-decoration-none sortable-header d-block">
+                                                Name
+                                                <i th:if="${currentSortBy == 'name'}" 
+                                                   th:class="${currentDirection == 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down'} + ' ms-1 sort-indicator active'" 
+                                                   class="ms-1 sort-indicator"></i>
+                                                <i th:unless="${currentSortBy == 'name'}" class="fas fa-sort ms-1 sort-indicator"></i>
+                                            </a>
+                                        </th>
+                                        <th>
+                                            <a th:href="@{/persons(sortBy='emailAddress', direction=${currentSortBy == 'emailAddress' && currentDirection == 'asc' ? 'desc' : 'asc'}, page=${currentPage}, size=${currentSize}, active=${currentActive}, textSearch=${currentTextSearch})}" 
+                                               class="text-white text-decoration-none sortable-header d-block">
+                                                Email Address
+                                                <i th:if="${currentSortBy == 'emailAddress'}" 
+                                                   th:class="${currentDirection == 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down'} + ' ms-1 sort-indicator active'" 
+                                                   class="ms-1 sort-indicator"></i>
+                                                <i th:unless="${currentSortBy == 'emailAddress'}" class="fas fa-sort ms-1 sort-indicator"></i>
+                                            </a>
+                                        </th>
+                                        <th>
+                                            <a th:href="@{/persons(sortBy='phone', direction=${currentSortBy == 'phone' && currentDirection == 'asc' ? 'desc' : 'asc'}, page=${currentPage}, size=${currentSize}, active=${currentActive}, textSearch=${currentTextSearch})}" 
+                                               class="text-white text-decoration-none sortable-header d-block">
+                                                Phone
+                                                <i th:if="${currentSortBy == 'phone'}" 
+                                                   th:class="${currentDirection == 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down'} + ' ms-1 sort-indicator active'" 
+                                                   class="ms-1 sort-indicator"></i>
+                                                <i th:unless="${currentSortBy == 'phone'}" class="fas fa-sort ms-1 sort-indicator"></i>
+                                            </a>
+                                        </th>
+                                        <th>
+                                            <a th:href="@{/persons(sortBy='active', direction=${currentSortBy == 'active' && currentDirection == 'asc' ? 'desc' : 'asc'}, page=${currentPage}, size=${currentSize}, active=${currentActive}, textSearch=${currentTextSearch})}" 
+                                               class="text-white text-decoration-none sortable-header d-block">
+                                                Status
+                                                <i th:if="${currentSortBy == 'active'}" 
+                                                   th:class="${currentDirection == 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down'} + ' ms-1 sort-indicator active'" 
+                                                   class="ms-1 sort-indicator"></i>
+                                                <i th:unless="${currentSortBy == 'active'}" class="fas fa-sort ms-1 sort-indicator"></i>
+                                            </a>
+                                        </th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="person : ${persons}">
+                                        <td th:text="${person.name}"></td>
+                                        <td>
+                                            <a th:href="'mailto:' + ${person.emailAddress}" th:text="${person.emailAddress}"></a>
+                                        </td>
+                                        <td th:text="${person.phone} ?: 'N/A'"></td>
+                                        <td>
+                                            <span th:if="${person.active}" 
+                                                  class="badge bg-success clickable-badge" 
+                                                  th:data-person-id="${person.id}"
+                                                  th:data-person-name="${person.name}"
+                                                  onclick="toggleActiveStatus(this)"
+                                                  title="Click to deactivate">
+                                                <i class="fas fa-check"></i> Active
+                                            </span>
+                                            <span th:unless="${person.active}" 
+                                                  class="badge bg-secondary clickable-badge" 
+                                                  th:data-person-id="${person.id}"
+                                                  th:data-person-name="${person.name}"
+                                                  onclick="toggleActiveStatus(this)"
+                                                  title="Click to activate">
+                                                <i class="fas fa-times"></i> Inactive
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <a th:href="@{/persons/{id}/edit(id=${person.id})}" 
+                                                   class="btn btn-sm btn-outline-primary" 
+                                                   title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-outline-danger" 
+                                                        th:data-person-id="${person.id}"
+                                                        th:data-person-name="${person.name}"
+                                                        onclick="confirmDelete(this)"
+                                                        title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Pagination Controls -->
+                    <div th:if="${!persons.isEmpty()}" class="card-footer">
+                        <div class="row align-items-center">
+                            <!-- Page Size Selector -->
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <label for="pageSize" class="form-label me-2 mb-0">Show:</label>
+                                    <select id="pageSize" class="form-select form-select-sm" style="width: auto;" onchange="changePageSize(this.value)">
+                                        <option value="10" th:selected="${(currentSize ?: 25) == 10}">10</option>
+                                        <option value="25" th:selected="${(currentSize ?: 25) == 25}">25</option>
+                                        <option value="50" th:selected="${(currentSize ?: 25) == 50}">50</option>
+                                        <option value="100" th:selected="${(currentSize ?: 25) == 100}">100</option>
+                                    </select>
+                                    <span class="ms-2 text-muted">per page</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Navigation Controls -->
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center justify-content-end">
+                                    <div class="btn-group" role="group">
+                                        <!-- First Button -->
+                                        <a th:href="@{/persons(page=0, size=${currentSize ?: 25}, sortBy=${currentSortBy ?: 'name'}, direction=${currentDirection ?: 'asc'}, active=${currentActive ?: 'all'}, textSearch=${currentTextSearch})}" 
+                                           class="btn btn-outline-primary btn-sm" 
+                                           th:classappend="${(isFirst ?: true)} ? 'disabled' : ''">
+                                            <i class="fas fa-angle-double-left"></i> First
+                                        </a>
+                                        
+                                        <!-- Prev Button -->
+                                        <a th:href="@{/persons(page=${(currentPage ?: 0) - 1}, size=${currentSize ?: 25}, sortBy=${currentSortBy ?: 'name'}, direction=${currentDirection ?: 'asc'}, active=${currentActive ?: 'all'}, textSearch=${currentTextSearch})}" 
+                                           class="btn btn-outline-primary btn-sm" 
+                                           th:classappend="${!(hasPrevious ?: false)} ? 'disabled' : ''">
+                                            <i class="fas fa-angle-left"></i> Prev
+                                        </a>
+                                        
+                                        <!-- Page Dropdown -->
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                                Page <span th:text="${(currentPage ?: 0) + 1}"></span> of <span th:text="${totalPages ?: 1}"></span>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li th:each="pageNum : ${#numbers.sequence(1, totalPages ?: 1)}">
+                                                    <a class="dropdown-item" 
+                                                       th:href="@{/persons(page=${pageNum - 1}, size=${currentSize ?: 25}, sortBy=${currentSortBy ?: 'name'}, direction=${currentDirection ?: 'asc'}, active=${currentActive ?: 'all'}, textSearch=${currentTextSearch})}"
+                                                       th:text="'Page ' + ${pageNum}">
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                        
+                                        <!-- Next Button -->
+                                        <a th:href="@{/persons(page=${(currentPage ?: 0) + 1}, size=${currentSize ?: 25}, sortBy=${currentSortBy ?: 'name'}, direction=${currentDirection ?: 'asc'}, active=${currentActive ?: 'all'}, textSearch=${currentTextSearch})}" 
+                                           class="btn btn-outline-primary btn-sm" 
+                                           th:classappend="${!(hasNext ?: false)} ? 'disabled' : ''">
+                                            Next <i class="fas fa-angle-right"></i>
+                                        </a>
+                                        
+                                        <!-- Last Button -->
+                                        <a th:href="@{/persons(page=${(totalPages ?: 1) - 1}, size=${currentSize ?: 25}, sortBy=${currentSortBy ?: 'name'}, direction=${currentDirection ?: 'asc'}, active=${currentActive ?: 'all'}, textSearch=${currentTextSearch})}" 
+                                           class="btn btn-outline-primary btn-sm" 
+                                           th:classappend="${(isLast ?: true)} ? 'disabled' : ''">
+                                            Last <i class="fas fa-angle-double-right"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete <strong id="personName"></strong>?</p>
+                    <p class="text-muted">This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form id="deleteForm" method="post" style="display: inline;">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function confirmDelete(button) {
+            const id = button.getAttribute('data-person-id');
+            const name = button.getAttribute('data-person-name');
+            document.getElementById('personName').textContent = name;
+            document.getElementById('deleteForm').action = '/persons/' + id + '/delete';
+            new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        }
+        
+        function changePageSize(newSize) {
+            const url = new URL(window.location);
+            url.searchParams.set('size', newSize);
+            url.searchParams.set('page', '0'); // Reset to first page when changing size
+            window.location.href = url.toString();
+        }
+        
+        function changeActiveFilter(newActive) {
+            const url = new URL(window.location);
+            url.searchParams.set('active', newActive);
+            url.searchParams.set('page', '0'); // Reset to first page when changing filter
+            window.location.href = url.toString();
+        }
+        
+        function handleTextSearch(event) {
+            if (event.key === 'Enter') {
+                performTextSearch();
+            }
+        }
+        
+        function performTextSearch() {
+            const textSearch = document.getElementById('textSearch').value.trim();
+            const url = new URL(window.location);
+            if (textSearch) {
+                url.searchParams.set('textSearch', textSearch);
+            } else {
+                url.searchParams.delete('textSearch');
+            }
+            url.searchParams.set('page', '0'); // Reset to first page when searching
+            window.location.href = url.toString();
+        }
+        
+        function handlePageJump(event) {
+            if (event.key === 'Enter') {
+                jumpToPage();
+            }
+        }
+        
+        function jumpToPage() {
+            const pageInput = document.getElementById('pageJump');
+            const pageNumber = parseInt(pageInput.value);
+            const maxPages = parseInt(pageInput.getAttribute('max'));
+            
+            if (pageNumber >= 1 && pageNumber <= maxPages) {
+                const url = new URL(window.location);
+                url.searchParams.set('page', (pageNumber - 1).toString()); // Convert to 0-based
+                window.location.href = url.toString();
+            } else {
+                alert('Please enter a valid page number between 1 and ' + maxPages);
+                pageInput.focus();
+            }
+        }
+        
+        function toggleActiveStatus(badgeElement) {
+            const personId = badgeElement.getAttribute('data-person-id');
+            const personName = badgeElement.getAttribute('data-person-name');
+            const isCurrentlyActive = badgeElement.classList.contains('bg-success');
+            
+            // Show loading state
+            const originalContent = badgeElement.innerHTML;
+            badgeElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+            badgeElement.style.pointerEvents = 'none';
+            
+            // Make AJAX request to toggle status
+            fetch(`/persons/${personId}/toggle-active`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.text();
+            })
+            .then(message => {
+                // Update the badge appearance
+                if (isCurrentlyActive) {
+                    // Was active, now inactive
+                    badgeElement.className = 'badge bg-secondary clickable-badge';
+                    badgeElement.innerHTML = '<i class="fas fa-times"></i> Inactive';
+                    badgeElement.setAttribute('title', 'Click to activate');
+                } else {
+                    // Was inactive, now active
+                    badgeElement.className = 'badge bg-success clickable-badge';
+                    badgeElement.innerHTML = '<i class="fas fa-check"></i> Active';
+                    badgeElement.setAttribute('title', 'Click to deactivate');
+                }
+                
+                // Show success message
+                showTemporaryMessage(message, 'success');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Restore original content on error
+                badgeElement.innerHTML = originalContent;
+                showTemporaryMessage('Error updating person status. Please try again.', 'error');
+            })
+            .finally(() => {
+                badgeElement.style.pointerEvents = 'auto';
+            });
+        }
+        
+        function showTemporaryMessage(message, type) {
+            // Create a temporary alert element
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+            alertDiv.style.position = 'fixed';
+            alertDiv.style.top = '20px';
+            alertDiv.style.right = '20px';
+            alertDiv.style.zIndex = '9999';
+            alertDiv.style.minWidth = '300px';
+            
+            alertDiv.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                <span>${message}</span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(alertDiv);
+            
+            // Auto-remove after 3 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

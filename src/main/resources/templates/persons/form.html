@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${isEdit} ? 'Edit Person' : 'Create Person'">Person Form</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i th:class="${isEdit} ? 'fas fa-edit' : 'fas fa-plus'"></i>
+                                <span th:text="${isEdit} ? 'Edit Person' : 'Create New Person'"></span>
+                            </h5>
+                            <a href="/persons" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-arrow-left"></i> Back to List
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <form th:action="${isEdit} ? @{/persons/{id}(id=${personId})} : @{/persons}" 
+                              th:object="${person}" 
+                              method="post">
+                            
+                            <!-- Name Field -->
+                            <div class="mb-3">
+                                <label for="name" class="form-label">
+                                    <i class="fas fa-user"></i> Name <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="name" 
+                                       th:field="*{name}" 
+                                       placeholder="Enter full name"
+                                       required>
+                                <div class="form-text">Enter the person's full name</div>
+                            </div>
+
+                            <!-- Email Address Field -->
+                            <div class="mb-3">
+                                <label for="emailAddress" class="form-label">
+                                    <i class="fas fa-envelope"></i> Email Address <span class="text-danger">*</span>
+                                </label>
+                                <input type="email" 
+                                       class="form-control" 
+                                       id="emailAddress" 
+                                       th:field="*{emailAddress}" 
+                                       placeholder="Enter email address"
+                                       required>
+                                <div class="form-text">Enter a valid email address</div>
+                            </div>
+
+                            <!-- Phone Field -->
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">
+                                    <i class="fas fa-phone"></i> Phone Number
+                                </label>
+                                <input type="tel" 
+                                       class="form-control" 
+                                       id="phone" 
+                                       th:field="*{phone}" 
+                                       placeholder="Enter phone number">
+                                <div class="form-text">Enter phone number (optional)</div>
+                            </div>
+
+                            <!-- Active Status Field -->
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-toggle-on"></i> Status
+                                </label>
+                                <div class="form-check">
+                                    <input class="form-check-input" 
+                                           type="radio" 
+                                           name="active" 
+                                           id="activeTrue" 
+                                           th:field="*{active}" 
+                                           th:value="true"
+                                           checked>
+                                    <label class="form-check-label" for="activeTrue">
+                                        <i class="fas fa-check-circle text-success"></i> Active
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" 
+                                           type="radio" 
+                                           name="active" 
+                                           id="activeFalse" 
+                                           th:field="*{active}" 
+                                           th:value="false">
+                                    <label class="form-check-label" for="activeFalse">
+                                        <i class="fas fa-times-circle text-secondary"></i> Inactive
+                                    </label>
+                                </div>
+                                <div class="form-text">Set whether this person is currently active</div>
+                            </div>
+
+                            <!-- Form Actions -->
+                            <div class="d-flex justify-content-between">
+                                <a href="/persons" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> Cancel
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i th:class="${isEdit} ? 'fas fa-save' : 'fas fa-plus'"></i>
+                                    <span th:text="${isEdit} ? 'Update Person' : 'Create Person'"></span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Help Section -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-info-circle"></i> Help</h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="mb-0">
+                            <li><strong>Name:</strong> Enter the person's full name as it should appear in the system</li>
+                            <li><strong>Email Address:</strong> This will be used for communication and must be unique</li>
+                            <li><strong>Phone Number:</strong> Optional contact number for the person</li>
+                            <li><strong>Status:</strong> Active persons can be assigned to tasks, inactive ones cannot</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Set default active status to true if not set
+        document.addEventListener('DOMContentLoaded', function() {
+            const activeInputs = document.querySelectorAll('input[name="active"]');
+            if (activeInputs.length > 0 && !document.querySelector('input[name="active"]:checked')) {
+                document.getElementById('activeTrue').checked = true;
+            }
+        });
+    </script>
+</body>
+</html>
