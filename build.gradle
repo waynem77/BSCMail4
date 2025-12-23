@@ -28,6 +28,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
+    // Database drivers
+    runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly 'com.h2database:h2'
+
     // Development tools
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     
@@ -58,5 +62,28 @@ tasks.named('bootRun') {
 // Disable the regular jar task (we only want the bootJar)
 tasks.named('jar') {
     enabled = false
+}
+
+// Task to generate DDL schema file
+tasks.register('generateDdlSchema', org.springframework.boot.gradle.tasks.run.BootRun) {
+    group = 'application'
+    description = 'Generates schema.ddl file from JPA entities using the ddlschema profile'
+    mainClass.set('io.github.waynem77.bscmail4.server.ServerApplication')
+    classpath = sourceSets.main.runtimeClasspath
+    args = []
+    systemProperty('spring.profiles.active', 'ddlschema')
+    // Set the absolute path for schema generation
+    def schemaFile = project.file('src/main/resources/schema.ddl')
+    // Convert Windows path to file:// URL format
+    def schemaFileUrl = schemaFile.toURI().toString()
+    systemProperty('spring.jpa.properties.jakarta.persistence.schema-generation.scripts.create-target', schemaFileUrl)
+    
+    // Delete existing file to ensure overwrite (Hibernate appends by default)
+    doFirst {
+        if (schemaFile.exists()) {
+            schemaFile.delete()
+            logger.info("Deleted existing schema.ddl file to ensure overwrite")
+        }
+    }
 }
 
