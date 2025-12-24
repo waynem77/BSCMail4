@@ -19,5 +19,3 @@ public class ServerApplication extends SpringBootServletInitializer {
         app.run(args);
     }
 }
-
-

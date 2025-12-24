@@ -27,9 +27,11 @@ src/main/java/io/github/waynem77/bscmail4/
 └── Launcher.java       # Main launcher to start both services
 
 src/main/resources/
-├── application-server.properties   # Server configuration
-├── application-client.properties  # Client configuration
-└── templates/            # Thymeleaf templates
+├── application-server.properties        # Base server configuration
+├── application-server-dev.properties    # Development database configuration
+├── application-server-prod.properties   # Production database configuration
+├── application-client.properties        # Client configuration
+└── templates/                           # Thymeleaf templates
 ```
 
 ## Building the Project
@@ -46,6 +48,17 @@ This will create a JAR file in `build/libs/BSCMail4-4.0-SNAPSHOT.jar`
 
 Use the launcher to start both services from a single JAR:
 
+**Development mode (uses development database):**
+```bash
+java -jar build/libs/BSCMail4-4.0-SNAPSHOT.jar --spring.profiles.active=server,dev,client
+```
+
+**Production mode (uses production database):**
+```bash
+java -jar build/libs/BSCMail4-4.0-SNAPSHOT.jar --spring.profiles.active=server,prod,client
+```
+
+**Default (no database profile specified - will fail without database config):**
 ```bash
 java -jar build/libs/BSCMail4-4.0-SNAPSHOT.jar
 ```
@@ -58,14 +71,24 @@ This will start:
 
 You can also run each service independently:
 
-**Server only:**
+**Server only (Development):**
 ```bash
-./gradlew bootRun --args='--spring.profiles.active=server'
+./gradlew bootRun  
 ```
 
 Or:
 ```bash
-java -jar build/libs/BSCMail4-4.0-SNAPSHOT.jar --spring.profiles.active=server
+java -jar build/libs/BSCMail4-4.0-SNAPSHOT.jar --spring.profiles.active=server,dev
+```
+
+**Server only (Production):**
+```bash
+./gradlew bootRun --args='--spring.profiles.active=server,prod'
+```
+
+Or:
+```bash
+java -jar build/libs/BSCMail4-4.0-SNAPSHOT.jar --spring.profiles.active=server,prod
 ```
 
 **Client only:**
@@ -106,19 +129,46 @@ java -jar build/libs/BSCMail4-4.0-SNAPSHOT.jar --spring.profiles.active=client
 For development, you can run the services separately using Gradle:
 
 ```bash
-# Terminal 1 - Server
-./gradlew bootRun --args='--spring.profiles.active=server'
+# Terminal 1 - Server (with development database)
+./gradlew bootRun --args='--spring.profiles.active=server,dev'
 
 # Terminal 2 - Client
 ./gradlew bootRun --args='--spring.profiles.active=client'
 ```
 
+**Note:** The `dev` profile configures the server to use the PostgreSQL development database (`bscmail-dev`). Make sure PostgreSQL is running and the database exists before starting the server.
+
 ## Configuration
 
-### Server Configuration (`application-server.properties`)
+### Server Configuration
 
+**Base Configuration (`application-server.properties`)**
 - Port: 8080
 - Thymeleaf: Disabled (REST API only)
+
+**Development Database (`application-server-dev.properties`)**
+- Database: PostgreSQL (`bscmail-dev`)
+- DDL Mode: `update` (auto-updates schema)
+- SQL Logging: Enabled
+- Connection Pool: 5 max connections
+
+**Production Database (`application-server-prod.properties`)**
+- Database: PostgreSQL (`bscmail-prod`)
+- DDL Mode: `validate` (no schema changes)
+- SQL Logging: Disabled
+- Connection Pool: 10 max connections
+
+**Database Credentials:**
+Database credentials can be overridden using environment variables:
+- `DB_USERNAME` (defaults to `postgres`)
+- `DB_PASSWORD` (defaults to `postgres`)
+
+Example:
+```bash
+export DB_USERNAME=myuser
+export DB_PASSWORD=mypassword
+java -jar app.jar --spring.profiles.active=server,dev
+```
 
 ### Client Configuration (`application-client.properties`)
 
@@ -133,13 +183,14 @@ For development, you can run the services separately using Gradle:
 - ✅ Thymeleaf templates for web interface
 - ✅ Single JAR deployment
 - ✅ Component isolation via package scanning
+- ✅ Database persistence with JPA/Hibernate
+- ✅ Environment-specific database configuration (dev/prod)
 - ✅ Sample CRUD operations for messages
 
 ## Next Steps
 
-1. Add database persistence (JPA/Hibernate)
-2. Add authentication and authorization
-3. Add input validation and error handling
-4. Add unit and integration tests
-5. Add logging and monitoring
-6. Add API documentation (Swagger/OpenAPI)
+1. Add authentication and authorization
+2. Add input validation and error handling
+3. Add unit and integration tests
+4. Add logging and monitoring
+5. Add API documentation (Swagger/OpenAPI)

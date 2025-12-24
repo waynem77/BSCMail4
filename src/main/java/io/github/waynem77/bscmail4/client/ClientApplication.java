@@ -26,5 +26,3 @@ public class ClientApplication extends SpringBootServletInitializer {
         return new RestTemplate();
     }
 }
-
-
