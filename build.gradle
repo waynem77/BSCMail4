@@ -44,6 +44,7 @@ dependencies {
     testAnnotationProcessor("org.projectlombok:lombok:1.18.42")
     testCompileOnly("org.projectlombok:lombok:1.18.42")
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.hamcrest:hamcrest:3.0'
 }
 
 tasks.named('test') {

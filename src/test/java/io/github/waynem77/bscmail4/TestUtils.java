@@ -64,7 +64,18 @@ public class TestUtils
     }
 
     /**
+     * Returns a randomly-generated integer.
+     *
+     * @return a randomly-generated integer
+     */
+    public static Integer randomInt()
+    {
+        return random.nextInt();
+    }
+
+    /**
      * Returns a randomly-generated long.
+     *
      * @return a randomly-generated long
      */
     public static Long randomLong()

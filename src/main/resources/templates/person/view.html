@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head}">
+</head>
+<body>
+    <nav th:replace="~{layout :: navbar}"></nav>
+    <div th:replace="~{layout :: alerts}"></div>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-md-8 offset-md-2">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1><i class="bi bi-person"></i> Person Details</h1>
+                    <a th:href="@{/person}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to List
+                    </a>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-sm-3">ID</dt>
+                            <dd class="col-sm-9" th:text="${person.id}"></dd>
+
+                            <dt class="col-sm-3">Name</dt>
+                            <dd class="col-sm-9" th:text="${person.name}"></dd>
+
+                            <dt class="col-sm-3">Email Address</dt>
+                            <dd class="col-sm-9" th:text="${person.emailAddress}"></dd>
+
+                            <dt class="col-sm-3">Phone Number</dt>
+                            <dd class="col-sm-9" th:text="${person.phone != null ? person.phone : '-'}"></dd>
+
+                            <dt class="col-sm-3">Status</dt>
+                            <dd class="col-sm-9">
+                                <span th:if="${person.isActive}" class="badge bg-success">Active</span>
+                                <span th:unless="${person.isActive}" class="badge bg-secondary">Inactive</span>
+                            </dd>
+
+                            <dt class="col-sm-3">Created At</dt>
+                            <dd class="col-sm-9" th:text="${person.createdAt != null ? #temporals.format(person.createdAt, 'yyyy-MM-dd HH:mm:ss') : '-'}"></dd>
+                        </dl>
+
+                        <div class="mt-4">
+                            <a th:href="@{/person}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Back to List
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:replace="~{layout :: scripts}"></script>
+</body>
+</html>
