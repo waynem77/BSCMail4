@@ -42,6 +42,20 @@
                         </dl>
 
                         <div class="mt-4">
+                            <button type="button" class="btn btn-info me-2" 
+                                    th:data-person-id="${person.id}"
+                                    th:data-person-name="${person.name}"
+                                    th:data-note-count="${person.numberOfNotes != null ? person.numberOfNotes : 0}"
+                                    onclick="showNotesModal(this)">
+                                <i class="bi bi-sticky"></i> Notes 
+                                <span class="badge bg-light text-dark" th:text="${person.numberOfNotes != null ? person.numberOfNotes : 0}"></span>
+                            </button>
+                            <button type="button" class="btn btn-success me-2"
+                                    th:data-person-id="${person.id}"
+                                    th:data-person-name="${person.name}"
+                                    onclick="showAddNoteModal(this)">
+                                <i class="bi bi-plus-circle"></i> Add Note
+                            </button>
                             <a th:href="@{/person}" class="btn btn-secondary">
                                 <i class="bi bi-arrow-left"></i> Back to List
                             </a>
@@ -52,6 +66,333 @@
         </div>
     </div>
 
+    <!-- Notes View Modal -->
+    <div class="modal fade" id="notesModal" tabindex="-1" aria-labelledby="notesModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="notesModalLabel">Notes for <span id="notesModalPersonName"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="notesLoading" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                    <div id="notesError" class="alert alert-danger" style="display: none;"></div>
+                    <div id="notesContent" style="display: none;">
+                        <div id="notesList"></div>
+                        <nav id="notesPagination"></nav>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Note Modal -->
+    <div class="modal fade" id="addNoteModal" tabindex="-1" aria-labelledby="addNoteModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addNoteModalLabel">Add Note to <span id="addNoteModalPersonName"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addNoteForm">
+                        <input type="hidden" id="addNotePersonId" name="personId"/>
+                        <div class="mb-3">
+                            <label for="noteValue" class="form-label">Note</label>
+                            <textarea class="form-control" id="noteValue" name="value" rows="5" required></textarea>
+                            <div class="invalid-feedback">Please provide a note.</div>
+                        </div>
+                        <div id="addNoteError" class="alert alert-danger" style="display: none;"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitNote()">Save Note</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script th:replace="~{layout :: scripts}"></script>
+    <script th:inline="javascript">
+        const serverApiUrl = /*[[${serverApiUrl}]]*/ 'http://localhost:8080/api';
+        let currentPersonId = null;
+        let currentNotesPage = 0;
+        let currentNotesDirection = 'asc';
+
+        function showNotesModal(button) {
+            const personId = button.getAttribute('data-person-id');
+            const personName = button.getAttribute('data-person-name');
+            currentPersonId = personId;
+            currentNotesPage = 0;
+            currentNotesDirection = 'asc';
+            
+            document.getElementById('notesModalPersonName').textContent = personName;
+            const modal = new bootstrap.Modal(document.getElementById('notesModal'));
+            modal.show();
+            
+            loadNotes(personId, 0, 'asc', 4);
+        }
+
+        function loadNotes(personId, page, direction, size = 4) {
+            // Prevent invalid page numbers
+            if (page < 0) {
+                console.warn('Page number cannot be less than 0');
+                return;
+            }
+            
+            currentPersonId = personId;
+            currentNotesPage = page;
+            currentNotesDirection = direction;
+            
+            document.getElementById('notesLoading').style.display = 'block';
+            document.getElementById('notesError').style.display = 'none';
+            document.getElementById('notesContent').style.display = 'none';
+            
+            const url = `${serverApiUrl}/person/${personId}/note?page=${page}&size=${size}&direction=${direction}`;
+            
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load notes');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Prevent navigation beyond valid page range
+                    if (data.totalPages > 0 && page >= data.totalPages) {
+                        console.warn('Page number exceeds total pages, resetting to last page');
+                        loadNotes(personId, data.totalPages - 1, direction, size);
+                        return;
+                    }
+                    displayNotes(data);
+                })
+                .catch(error => {
+                    console.error('Error loading notes:', error);
+                    document.getElementById('notesError').textContent = 'Error loading notes: ' + error.message;
+                    document.getElementById('notesError').style.display = 'block';
+                    document.getElementById('notesLoading').style.display = 'none';
+                });
+        }
+
+        function displayNotes(container) {
+            document.getElementById('notesLoading').style.display = 'none';
+            document.getElementById('notesContent').style.display = 'block';
+            
+            const notesList = document.getElementById('notesList');
+            const pagination = document.getElementById('notesPagination');
+            
+            // Remove existing summary if present
+            const existingSummary = document.getElementById('notesSummary');
+            if (existingSummary) {
+                existingSummary.remove();
+            }
+            
+            if (!container.elements || container.elements.length === 0) {
+                notesList.innerHTML = '<p class="text-muted text-center py-3">No notes found.</p>';
+                pagination.innerHTML = '';
+                
+                // Page summary even when no notes
+                const summaryDiv = document.createElement('div');
+                summaryDiv.id = 'notesSummary';
+                summaryDiv.className = 'text-muted text-center mt-3';
+                summaryDiv.innerHTML = `
+                    Page <span>${container.pageNumber + 1}</span> of
+                    <span>${container.totalPages}</span>
+                `;
+                pagination.appendChild(summaryDiv);
+                return;
+            }
+            
+            let notesHtml = '<div class="list-group">';
+            container.elements.forEach(note => {
+                const date = new Date(note.createdAt);
+                const formattedDate = date.toLocaleString();
+                notesHtml += `
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <p class="mb-1">${escapeHtml(note.value)}</p>
+                                <small class="text-muted">${formattedDate}</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            notesHtml += '</div>';
+            notesList.innerHTML = notesHtml;
+            
+            // Pagination
+            if (container.totalPages > 1) {
+                let paginationHtml = '<ul class="pagination justify-content-center mt-3">';
+                
+                // Previous button
+                const prevPage = container.pageNumber - 1;
+                if (container.isFirst === true || container.pageNumber <= 0) {
+                    paginationHtml += `
+                        <li class="page-item disabled">
+                            <span class="page-link" style="pointer-events: none; cursor: default;">
+                                <i class="bi bi-chevron-left"></i> Previous
+                            </span>
+                        </li>
+                    `;
+                } else {
+                    paginationHtml += `
+                        <li class="page-item">
+                            <a class="page-link" href="#" onclick="event.preventDefault(); if (${container.pageNumber} > 0) { loadNotes(${currentPersonId}, ${prevPage}, '${currentNotesDirection}', 4); } return false;">
+                                <i class="bi bi-chevron-left"></i> Previous
+                            </a>
+                        </li>
+                    `;
+                }
+                
+                // Page numbers
+                for (let i = 0; i < container.totalPages; i++) {
+                    paginationHtml += `
+                        <li class="page-item ${i === currentNotesPage ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="event.preventDefault(); loadNotes(${currentPersonId}, ${i}, '${currentNotesDirection}', 4); return false;">
+                                ${i + 1}
+                            </a>
+                        </li>
+                    `;
+                }
+                
+                // Next button
+                const nextPage = container.pageNumber + 1;
+                if (container.isLast === true || nextPage >= container.totalPages) {
+                    paginationHtml += `
+                        <li class="page-item disabled">
+                            <span class="page-link" style="pointer-events: none; cursor: default;">
+                                Next <i class="bi bi-chevron-right"></i>
+                            </span>
+                        </li>
+                    `;
+                } else {
+                    paginationHtml += `
+                        <li class="page-item">
+                            <a class="page-link" href="#" onclick="event.preventDefault(); if (${nextPage} < ${container.totalPages}) { loadNotes(${currentPersonId}, ${nextPage}, '${currentNotesDirection}', 4); } return false;">
+                                Next <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                    `;
+                }
+                
+                // Sort direction toggle
+                const newDirection = currentNotesDirection === 'asc' ? 'desc' : 'asc';
+                paginationHtml += `
+                    <li class="page-item">
+                        <a class="page-link" href="#" onclick="event.preventDefault(); loadNotes(${currentPersonId}, 0, '${newDirection}', 4); return false;" title="Toggle sort order">
+                            <i class="bi bi-arrow-${currentNotesDirection === 'asc' ? 'up' : 'down'}"></i>
+                        </a>
+                    </li>
+                `;
+                
+                paginationHtml += '</ul>';
+                pagination.innerHTML = paginationHtml;
+                
+                // Page summary below pagination
+                const summaryDiv = document.createElement('div');
+                summaryDiv.id = 'notesSummary';
+                summaryDiv.className = 'text-muted text-center mt-3';
+                summaryDiv.innerHTML = `
+                    Page <span>${container.pageNumber + 1}</span> of
+                    <span>${container.totalPages}</span>
+                `;
+                pagination.appendChild(summaryDiv);
+            } else {
+                pagination.innerHTML = '';
+                
+                // Page summary even when only one page
+                const summaryDiv = document.createElement('div');
+                summaryDiv.id = 'notesSummary';
+                summaryDiv.className = 'text-muted text-center mt-3';
+                summaryDiv.innerHTML = `
+                    Page <span>${container.pageNumber + 1}</span> of
+                    <span>${container.totalPages}</span>
+                `;
+                pagination.appendChild(summaryDiv);
+            }
+        }
+
+        function showAddNoteModal(button) {
+            const personId = button.getAttribute('data-person-id');
+            const personName = button.getAttribute('data-person-name');
+            
+            document.getElementById('addNotePersonId').value = personId;
+            document.getElementById('addNoteModalPersonName').textContent = personName;
+            document.getElementById('noteValue').value = '';
+            document.getElementById('addNoteError').style.display = 'none';
+            document.getElementById('addNoteForm').classList.remove('was-validated');
+            
+            const modal = new bootstrap.Modal(document.getElementById('addNoteModal'));
+            modal.show();
+        }
+
+        function submitNote() {
+            const form = document.getElementById('addNoteForm');
+            const personId = document.getElementById('addNotePersonId').value;
+            const noteValue = document.getElementById('noteValue').value.trim();
+            
+            if (!noteValue) {
+                form.classList.add('was-validated');
+                return;
+            }
+            
+            document.getElementById('addNoteError').style.display = 'none';
+            
+            const url = `${serverApiUrl}/person/${personId}/note`;
+            const data = { value: noteValue };
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            throw new Error(text || 'Failed to create note');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(() => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addNoteModal'));
+                    modal.hide();
+                    // Reload the page to refresh note counts
+                    window.location.reload();
+                })
+                .catch(error => {
+                    console.error('Error creating note:', error);
+                    document.getElementById('addNoteError').textContent = 'Error creating note: ' + error.message;
+                    document.getElementById('addNoteError').style.display = 'block';
+                });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Refresh notes when modal is reopened if we have a person ID
+        const notesModalElement = document.getElementById('notesModal');
+        if (notesModalElement) {
+            notesModalElement.addEventListener('shown.bs.modal', function() {
+                if (currentPersonId) {
+                    loadNotes(currentPersonId, currentNotesPage, currentNotesDirection, 4);
+                }
+            });
+        }
+    </script>
 </body>
 </html>

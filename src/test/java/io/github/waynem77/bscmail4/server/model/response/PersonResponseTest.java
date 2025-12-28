@@ -41,6 +41,7 @@ class PersonResponseTest
         assertThat(response.getEmailAddress(), equalTo(emailAddress));
         assertThat(response.getPhone(), equalTo(phone));
         assertThat(response.getIsActive(), equalTo(isActive));
+        assertThat(response.getNumberOfNotes(), equalTo(0L));
     }
 
     @Test
@@ -68,6 +69,7 @@ class PersonResponseTest
         assertThat(response.getEmailAddress(), nullValue());
         assertThat(response.getPhone(), nullValue());
         assertThat(response.getIsActive(), notNullValue());
+        assertThat(response.getNumberOfNotes(), equalTo(0L));
     }
 
     @Test
@@ -78,6 +80,31 @@ class PersonResponseTest
 
         // Then
         assertThat(response, nullValue());
+    }
+
+    @Test
+    void fromPersonWithNumberOfNotesShouldReturnPersonResponseWithCorrectNumberOfNotes()
+    {
+        // Given
+        Long id = randomLong();
+        String name = randomString();
+        long numberOfNotes = randomLong();
+
+        Person person = Person.builder()
+                .id(id)
+                .name(name)
+                .emailAddress(randomStringWithSuffix("@example.com"))
+                .isActive(randomBool())
+                .build();
+
+        // When
+        PersonResponse response = PersonResponse.fromPerson(person, numberOfNotes);
+
+        // Then
+        assertThat(response, notNullValue());
+        assertThat(response.getId(), equalTo(id));
+        assertThat(response.getName(), equalTo(name));
+        assertThat(response.getNumberOfNotes(), equalTo(numberOfNotes));
     }
 }
 

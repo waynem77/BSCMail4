@@ -1,6 +1,7 @@
 package io.github.waynem77.bscmail4.server.service;
 
 import io.github.waynem77.bscmail4.server.database.entity.Person;
+import io.github.waynem77.bscmail4.server.database.repository.NoteRepository;
 import io.github.waynem77.bscmail4.server.database.repository.PersonRepository;
 import io.github.waynem77.bscmail4.server.database.specification.PersonSpecifications;
 import io.github.waynem77.bscmail4.server.model.PersonSortBy;
@@ -28,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PersonService
 {
     private final PersonRepository personRepository;
+    private final NoteRepository noteRepository;
 
     /**
      * Creates a new Person entity from the given request and saves it to the database.
@@ -47,7 +49,8 @@ public class PersonService
                 .build();
 
         Person savedPerson = personRepository.save(person);
-        return PersonResponse.fromPerson(savedPerson);
+        long numberOfNotes = noteRepository.countByPersonId(savedPerson.getId());
+        return PersonResponse.fromPerson(savedPerson, numberOfNotes);
     }
 
     /**
@@ -65,7 +68,8 @@ public class PersonService
                     log.error("Person not found. id={}", personId);
                     return new NotFoundException("Person not found.");
                 });
-        return PersonResponse.fromPerson(person);
+        long numberOfNotes = noteRepository.countByPersonId(personId);
+        return PersonResponse.fromPerson(person, numberOfNotes);
     }
 
     /**
@@ -92,7 +96,8 @@ public class PersonService
         person.setIsActive(request.getIsActive());
 
         Person savedPerson = personRepository.save(person);
-        return PersonResponse.fromPerson(savedPerson);
+        long numberOfNotes = noteRepository.countByPersonId(savedPerson.getId());
+        return PersonResponse.fromPerson(savedPerson, numberOfNotes);
     }
 
     /**
@@ -149,7 +154,7 @@ public class PersonService
         // Execute query
         Page<Person> personPage = personRepository.findAll(spec, pageable);
 
-        return new PersonContainer(personPage);
+        return new PersonContainer(personPage, noteRepository);
     }
 }
 

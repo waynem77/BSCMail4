@@ -1,6 +1,9 @@
 package io.github.waynem77.bscmail4.client.service;
 
+import io.github.waynem77.bscmail4.client.dto.CreateNoteRequest;
 import io.github.waynem77.bscmail4.client.dto.CreatePersonRequest;
+import io.github.waynem77.bscmail4.client.dto.NoteContainer;
+import io.github.waynem77.bscmail4.client.dto.NoteResponse;
 import io.github.waynem77.bscmail4.client.dto.PersonContainer;
 import io.github.waynem77.bscmail4.client.dto.PersonResponse;
 import io.github.waynem77.bscmail4.client.dto.UpdatePersonRequest;
@@ -150,6 +153,75 @@ public class PersonClientService
                 .isActive(!person.getIsActive())
                 .build();
         return updatePerson(personId, request);
+    }
+
+    /**
+     * Retrieves a paginated list of Notes for a Person from the server API.
+     *
+     * @param personId  the ID of the person to retrieve notes for
+     * @param page      the page number (0-based)
+     * @param size      the page size
+     * @param direction the sort direction (asc or desc)
+     * @return a NoteContainer containing the paginated results
+     */
+    public NoteContainer getNotes(Long personId, int page, int size, String direction)
+    {
+        log.info("Getting notes via API. personId={}, page={}, size={}, direction={}", personId, page, size, direction);
+
+        try
+        {
+            UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(serverApiUrl + "/person/" + personId + "/note")
+                    .queryParam("page", page)
+                    .queryParam("size", size)
+                    .queryParam("direction", direction);
+
+            String url = builder.toUriString();
+            log.debug("Calling server API: {}", url);
+            ResponseEntity<NoteContainer> response = restTemplate.getForEntity(url, NoteContainer.class);
+            return response.getBody();
+        }
+        catch (ResourceAccessException e)
+        {
+            log.error("Failed to connect to server API at {}. Is the server running?", serverApiUrl, e);
+            throw new RuntimeException("Unable to connect to server. Please ensure the server is running.", e);
+        }
+        catch (HttpClientErrorException | HttpServerErrorException e)
+        {
+            log.error("Server API returned error. status={}, response={}", e.getStatusCode(),
+                    e.getResponseBodyAsString(), e);
+            throw new RuntimeException("Server API error: " + e.getStatusCode(), e);
+        }
+    }
+
+    /**
+     * Creates a new Note for a Person by calling the server API.
+     *
+     * @param personId the ID of the person to create the note for
+     * @param request  the request containing note data
+     * @return the created note as a NoteResponse
+     */
+    public NoteResponse createNote(Long personId, CreateNoteRequest request)
+    {
+        log.info("Creating note via API. personId={}, request={}", personId, request);
+
+        try
+        {
+            String url = serverApiUrl + "/person/" + personId + "/note";
+            HttpEntity<CreateNoteRequest> httpEntity = new HttpEntity<>(request);
+            ResponseEntity<NoteResponse> response = restTemplate.postForEntity(url, httpEntity, NoteResponse.class);
+            return response.getBody();
+        }
+        catch (ResourceAccessException e)
+        {
+            log.error("Failed to connect to server API at {}. Is the server running?", serverApiUrl, e);
+            throw new RuntimeException("Unable to connect to server. Please ensure the server is running.", e);
+        }
+        catch (HttpClientErrorException | HttpServerErrorException e)
+        {
+            log.error("Server API returned error. status={}, response={}", e.getStatusCode(),
+                    e.getResponseBodyAsString(), e);
+            throw new RuntimeException("Server API error: " + e.getStatusCode(), e);
+        }
     }
 }
 

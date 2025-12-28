@@ -1,9 +1,13 @@
 package io.github.waynem77.bscmail4.server.controller;
 
+import io.github.waynem77.bscmail4.server.model.request.CreateNoteRequest;
 import io.github.waynem77.bscmail4.server.model.request.CreatePersonRequest;
 import io.github.waynem77.bscmail4.server.model.request.UpdatePersonRequest;
+import io.github.waynem77.bscmail4.server.model.response.NoteContainer;
+import io.github.waynem77.bscmail4.server.model.response.NoteResponse;
 import io.github.waynem77.bscmail4.server.model.response.PersonContainer;
 import io.github.waynem77.bscmail4.server.model.response.PersonResponse;
+import io.github.waynem77.bscmail4.server.service.NoteService;
 import io.github.waynem77.bscmail4.server.service.PersonService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 public class PersonController
 {
     private final PersonService personService;
+    private final NoteService noteService;
 
     /**
      * Creates a new Person entity.
@@ -85,6 +90,56 @@ public class PersonController
         log.info("Getting persons. page={}, size={}, sortBy={}, direction={}, isActive={}, search={}",
                 page, size, sortBy, direction, isActive, search);
         return personService.getPersons(page, size, sortBy, direction, isActive, search);
+    }
+
+    /**
+     * Retrieves a paginated list of Note entities for the specified Person.
+     *
+     * @param personId  the ID of the person to retrieve notes for
+     * @param page      the page number (0-based, default 0)
+     * @param size      the page size (default 5)
+     * @param direction the sort direction (asc or desc, default asc)
+     * @return a NoteContainer containing the paginated results
+     */
+    @GetMapping("/api/person/{personId}/note")
+    public NoteContainer getNotes(
+            @PathVariable Long personId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size,
+            @RequestParam(defaultValue = "asc") String direction)
+    {
+        log.info("Getting notes for person. personId={}, page={}, size={}, direction={}", personId, page, size,
+                direction);
+        return noteService.getNotes(personId, page, size, direction);
+    }
+
+    /**
+     * Creates a new Note entity for the specified Person.
+     *
+     * @param personId the ID of the person to create the note for
+     * @param request  the request containing note data
+     * @return the created note as a NoteResponse
+     */
+    @PostMapping("/api/person/{personId}/note")
+    @ResponseStatus(HttpStatus.CREATED)
+    public NoteResponse createNote(@PathVariable Long personId, @Valid @RequestBody CreateNoteRequest request)
+    {
+        log.info("Creating note for person. personId={}, request={}", personId, request);
+        return noteService.createNote(personId, request);
+    }
+
+    /**
+     * Retrieves a Note entity by its ID, ensuring it belongs to the specified Person.
+     *
+     * @param personId the ID of the person who should own the note
+     * @param noteId   the ID of the note to retrieve
+     * @return the note as a NoteResponse
+     */
+    @GetMapping("/api/person/{personId}/note/{noteId}")
+    public NoteResponse getNote(@PathVariable Long personId, @PathVariable Long noteId)
+    {
+        log.info("Getting note by ID. personId={}, noteId={}", personId, noteId);
+        return noteService.getNoteById(personId, noteId);
     }
 }
 

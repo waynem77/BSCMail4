@@ -48,12 +48,31 @@ public class PersonResponse
     private Instant createdAt;
 
     /**
+     * The number of notes associated with the person.
+     */
+    private Long numberOfNotes;
+
+    /**
      * Creates a PersonResponse from a Person entity.
+     * This method uses a default value of 0 for numberOfNotes.
+     * For accurate counts, use {@link #fromPerson(Person, long)} instead.
      *
      * @param person the Person entity to convert
      * @return a PersonResponse corresponding to the given Person, or null if person is null
      */
     public static PersonResponse fromPerson(Person person)
+    {
+        return fromPerson(person, 0L);
+    }
+
+    /**
+     * Creates a PersonResponse from a Person entity with the specified number of notes.
+     *
+     * @param person        the Person entity to convert
+     * @param numberOfNotes the number of notes associated with the person
+     * @return a PersonResponse corresponding to the given Person, or null if person is null
+     */
+    public static PersonResponse fromPerson(Person person, long numberOfNotes)
     {
         if (person == null)
         {
@@ -66,6 +85,7 @@ public class PersonResponse
                 .phone(person.getPhone())
                 .isActive(person.getIsActive())
                 .createdAt(person.getCreatedAt())
+                .numberOfNotes(numberOfNotes)
                 .build();
     }
 }

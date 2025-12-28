@@ -1,6 +1,7 @@
 package io.github.waynem77.bscmail4.server.service;
 
 import io.github.waynem77.bscmail4.server.database.entity.Person;
+import io.github.waynem77.bscmail4.server.database.repository.NoteRepository;
 import io.github.waynem77.bscmail4.server.database.repository.PersonRepository;
 import io.github.waynem77.bscmail4.server.model.request.CreatePersonRequest;
 import io.github.waynem77.bscmail4.server.model.request.UpdatePersonRequest;
@@ -27,6 +28,9 @@ class PersonServiceTest
 {
     @Mock
     private PersonRepository personRepository;
+
+    @Mock
+    private NoteRepository noteRepository;
 
     @InjectMocks
     private PersonService personService;
@@ -55,6 +59,7 @@ class PersonServiceTest
                 .build();
 
         when(personRepository.save(any(Person.class))).thenReturn(savedPerson);
+        when(noteRepository.countByPersonId(savedId)).thenReturn(0L);
 
         // When
         PersonResponse result = personService.createPerson(request);
@@ -100,6 +105,7 @@ class PersonServiceTest
                 .build();
 
         when(personRepository.save(any(Person.class))).thenReturn(savedPerson);
+        when(noteRepository.countByPersonId(savedId)).thenReturn(0L);
 
         // When
         PersonResponse result = personService.createPerson(request);
@@ -144,6 +150,7 @@ class PersonServiceTest
                 .build();
 
         when(personRepository.save(any(Person.class))).thenReturn(savedPerson);
+        when(noteRepository.countByPersonId(savedId)).thenReturn(0L);
 
         // When
         PersonResponse result = personService.createPerson(request);
@@ -180,6 +187,7 @@ class PersonServiceTest
                 .build();
 
         when(personRepository.save(any(Person.class))).thenReturn(savedPerson);
+        when(noteRepository.countByPersonId(savedId)).thenReturn(0L);
 
         // When
         PersonResponse result = personService.createPerson(request);
@@ -212,6 +220,7 @@ class PersonServiceTest
                 .build();
 
         when(personRepository.findById(personId)).thenReturn(java.util.Optional.of(person));
+        when(noteRepository.countByPersonId(personId)).thenReturn(0L);
 
         // When
         PersonResponse result = personService.getPersonById(personId);
@@ -281,6 +290,7 @@ class PersonServiceTest
 
         when(personRepository.findById(personId)).thenReturn(java.util.Optional.of(existingPerson));
         when(personRepository.save(any(Person.class))).thenReturn(updatedPerson);
+        when(noteRepository.countByPersonId(personId)).thenReturn(0L);
 
         // When
         PersonResponse result = personService.updatePerson(personId, request);
@@ -343,6 +353,7 @@ class PersonServiceTest
 
         when(personRepository.findById(personId)).thenReturn(java.util.Optional.of(existingPerson));
         when(personRepository.save(any(Person.class))).thenReturn(updatedPerson);
+        when(noteRepository.countByPersonId(personId)).thenReturn(0L);
 
         // When
         PersonResponse result = personService.updatePerson(personId, request);
@@ -422,6 +433,7 @@ class PersonServiceTest
 
         when(personRepository.findById(personId)).thenReturn(java.util.Optional.of(existingPerson));
         when(personRepository.save(any(Person.class))).thenReturn(updatedPerson);
+        when(noteRepository.countByPersonId(personId)).thenReturn(0L);
 
         // When
         PersonResponse result = personService.updatePerson(personId, request);

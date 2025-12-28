@@ -1,10 +1,15 @@
 package io.github.waynem77.bscmail4.server.controller;
 
 import io.github.waynem77.bscmail4.BaseIT;
+import io.github.waynem77.bscmail4.server.database.entity.Note;
 import io.github.waynem77.bscmail4.server.database.entity.Person;
+import io.github.waynem77.bscmail4.server.database.repository.NoteRepository;
 import io.github.waynem77.bscmail4.server.database.repository.PersonRepository;
+import io.github.waynem77.bscmail4.server.model.request.CreateNoteRequest;
 import io.github.waynem77.bscmail4.server.model.request.CreatePersonRequest;
 import io.github.waynem77.bscmail4.server.model.request.UpdatePersonRequest;
+import io.github.waynem77.bscmail4.server.model.response.NoteContainer;
+import io.github.waynem77.bscmail4.server.model.response.NoteResponse;
 import io.github.waynem77.bscmail4.server.model.response.PersonContainer;
 import io.github.waynem77.bscmail4.server.model.response.PersonResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,6 +35,9 @@ class PersonControllerIT extends BaseIT
 {
     @Autowired
     private PersonRepository personRepository;
+
+    @Autowired
+    private NoteRepository noteRepository;
 
     // Tests for GET /api/person/{personId}
     @Nested
@@ -59,6 +67,8 @@ class PersonControllerIT extends BaseIT
             assertThat(responseBody.getEmailAddress(), equalTo(emailAddress));
             assertThat(responseBody.getPhone(), equalTo(phone));
             assertThat(responseBody.getIsActive(), equalTo(true));
+            assertThat(responseBody.getNumberOfNotes(), notNullValue());
+            assertThat(responseBody.getNumberOfNotes(), equalTo(0L));
         }
 
         @Test
@@ -850,6 +860,471 @@ class PersonControllerIT extends BaseIT
         }
     }
 
+    // Tests for POST /api/person/{personId}/note
+    @Nested
+    class CreateNote
+    {
+        @Test
+        void createNoteWithValidDataShouldReturnCreatedStatusAndSaveNoteToDatabase()
+        {
+            // Given
+            Person savedPerson = createPerson(randomString(), randomStringWithSuffix("@example.com"), randomString(),
+                    true);
+            String noteValue = randomString();
+
+            CreateNoteRequest request = CreateNoteRequest.builder()
+                    .value(noteValue)
+                    .build();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<CreateNoteRequest> httpEntity = new HttpEntity<>(request, headers);
+
+            // When
+            ResponseEntity<NoteResponse> response = restTemplate.postForEntity(
+                    url("/api/person/" + savedPerson.getId() + "/note"), httpEntity, NoteResponse.class);
+
+            // Then
+            assertThat(response.getStatusCode(), equalTo(HttpStatus.CREATED));
+            assertThat(response.getBody(), notNullValue());
+
+            NoteResponse responseBody = response.getBody();
+            assertThat(responseBody.getId(), notNullValue());
+            addDbCleanup("note", responseBody.getId());
+            assertThat(responseBody.getValue(), equalTo(noteValue));
+            assertThat(responseBody.getPersonId(), equalTo(savedPerson.getId()));
+            assertThat(responseBody.getCreatedAt(), notNullValue());
+
+            Note savedNote = noteRepository.findById(responseBody.getId()).orElse(null);
+            assertThat(savedNote, notNullValue());
+            assertThat(savedNote.getValue(), equalTo(noteValue));
+            assertThat(savedNote.getPerson().getId(), equalTo(savedPerson.getId()));
+            assertThat(savedNote.getCreatedAt(), notNullValue());
+        }
+
+        @Test
+        void createNoteWithNonExistentPersonIdShouldReturnNotFoundStatus()
+        {
+            // Given
+            Long nonExistentPersonId = randomLong();
+            String noteValue = randomString();
+
+            CreateNoteRequest request = CreateNoteRequest.builder()
+                    .value(noteValue)
+                    .build();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<CreateNoteRequest> httpEntity = new HttpEntity<>(request, headers);
+
+            // When
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                    url("/api/person/" + nonExistentPersonId + "/note"), httpEntity, String.class);
+
+            // Then
+            assertThat(response.getStatusCode(), equalTo(HttpStatus.NOT_FOUND));
+        }
+
+        @ParameterizedTest(name = "{0}")
+        @MethodSource("invalidCreateNoteRequests")
+        void createNoteWithInvalidDataShouldReturnBadRequest(String displayName, CreateNoteRequest request)
+        {
+            // Given
+            Person savedPerson = createPerson(randomString(), randomStringWithSuffix("@example.com"), randomString(),
+                    true);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<CreateNoteRequest> httpEntity = new HttpEntity<>(request, headers);
+
+            // When
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                    url("/api/person/" + savedPerson.getId() + "/note"), httpEntity, String.class);
+
+            // Then
+            assertThat(response.getStatusCode(), equalTo(HttpStatus.BAD_REQUEST));
+        }
+
+        private static Stream<Arguments> invalidCreateNoteRequests()
+        {
+            return Stream.of(
+                    Arguments.of("Missing value", CreateNoteRequest.builder()
+                            .value(null)
+                            .build()),
+                    Arguments.of("Blank value", CreateNoteRequest.builder()
+                            .value("")
+                            .build())
+            );
+        }
+    }
+
+    // Tests for GET /api/person/{personId}/note/{noteId}
+    @Nested
+    class GetNote
+    {
+        @Test
+        void getNoteWithValidIdsShouldReturnOkStatusAndNoteData()
+        {
+            // Given
+            Person savedPerson = createPerson(randomString(), randomStringWithSuffix("@example.com"), randomString(),
+                    true);
+            String noteValue = randomString();
+
+            Note savedNote = createNote(savedPerson, noteValue);
+
+            // When
+            ResponseEntity<NoteResponse> response = restTemplate.getForEntity(
+                    url("/api/person/" + savedPerson.getId() + "/note/" + savedNote.getId()), NoteResponse.class);
+
+            // Then
+            assertThat(response.getStatusCode(), equalTo(HttpStatus.OK));
+            assertThat(response.getBody(), notNullValue());
+
+            NoteResponse responseBody = response.getBody();
+            assertThat(responseBody.getId(), equalTo(savedNote.getId()));
+            assertThat(responseBody.getValue(), equalTo(noteValue));
+            assertThat(responseBody.getPersonId(), equalTo(savedPerson.getId()));
+            assertThat(responseBody.getCreatedAt(), notNullValue());
+        }
+
+        @Test
+        void getNoteWithNonExistentNoteIdShouldReturnNotFoundStatus()
+        {
+            // Given
+            Person savedPerson = createPerson(randomString(), randomStringWithSuffix("@example.com"), randomString(),
+                    true);
+            Long nonExistentNoteId = randomLong();
+
+            // When
+            ResponseEntity<String> response = restTemplate.getForEntity(
+                    url("/api/person/" + savedPerson.getId() + "/note/" + nonExistentNoteId), String.class);
+
+            // Then
+            assertThat(response.getStatusCode(), equalTo(HttpStatus.NOT_FOUND));
+        }
+
+        @Test
+        void getNoteWithNoteBelongingToDifferentPersonShouldReturnBadRequestStatus()
+        {
+            // Given
+            Person person1 = createPerson(randomString(), randomStringWithSuffix("@example.com"), randomString(), true);
+            Person person2 = createPerson(randomString(), randomStringWithSuffix("@example.com"), randomString(), true);
+
+            Note noteForPerson1 = createNote(person1, randomString());
+
+            // When
+            ResponseEntity<String> response = restTemplate.getForEntity(
+                    url("/api/person/" + person2.getId() + "/note/" + noteForPerson1.getId()), String.class);
+
+            // Then
+            assertThat(response.getStatusCode(), equalTo(HttpStatus.BAD_REQUEST));
+        }
+
+        @Test
+        void getNoteShouldReturnNoteResponseWithAllFields()
+        {
+            // Given
+            Person savedPerson = createPerson(randomString(), randomStringWithSuffix("@example.com"), randomString(),
+                    true);
+            String noteValue = randomString();
+
+            Note savedNote = createNote(savedPerson, noteValue);
+
+            // When
+            ResponseEntity<NoteResponse> response = restTemplate.getForEntity(
+                    url("/api/person/" + savedPerson.getId() + "/note/" + savedNote.getId()), NoteResponse.class);
+
+            // Then
+            assertThat(response.getStatusCode(), equalTo(HttpStatus.OK));
+            assertThat(response.getBody(), notNullValue());
+
+            NoteResponse responseBody = response.getBody();
+            assertThat(responseBody.getId(), notNullValue());
+            assertThat(responseBody.getValue(), notNullValue());
+            assertThat(responseBody.getPersonId(), notNullValue());
+            assertThat(responseBody.getCreatedAt(), notNullValue());
+        }
+    }
+
+    // Tests for GET /api/person/{personId}/note
+    @Nested
+    class ListNotes
+    {
+        @Test
+        void getNotesWithValidPersonIdShouldReturnOkStatusAndNoteContainer()
+        {
+            // Given
+            Person savedPerson = createPerson(randomString(), randomStringWithSuffix("@example.com"), randomString(),
+                    true);
+            String noteValue1 = randomString();
+            String noteValue2 = randomString();
+
+            Note note1 = createNote(savedPerson, noteValue1);
+            Note note2 = createNote(savedPerson, noteValue2);
+
+            // When
+            ResponseEntity<NoteContainer> response = restTemplate.getForEntity(
+                    url("/api/person/" + savedPerson.getId() + "/note"), NoteContainer.class);
+
+            // Then
+            assertThat(response.getStatusCode(), equalTo(HttpStatus.OK));
+            assertThat(response.getBody(), notNullValue());
+
+            NoteContainer container = response.getBody();
+            assertThat(container.getElements(), notNullValue());
+            assertThat(container.getElements().size(), equalTo(2));
+            assertThat(container.getPageNumber(), equalTo(0));
+            assertThat(container.getSize(), equalTo(5));
+            assertThat(container.getTotalElements(), equalTo(2L));
+            assertThat(container.getTotalPages(), equalTo(1));
+            assertThat(container.isFirst(), equalTo(true));
+            assertThat(container.isLast(), equalTo(true));
+
+            // Verify notes are in response
+            List<Long> noteIds = container.getElements().stream().map(NoteResponse::getId).toList();
+            assertThat(noteIds, hasItem(note1.getId()));
+            assertThat(noteIds, hasItem(note2.getId()));
+        }
+
+        @Test
+        void getNotesWithNonExistentPersonIdShouldReturnNotFoundStatus()
+        {
+            // Given
+            Long nonExistentPersonId = randomLong();
+
+            // When
+            ResponseEntity<String> response = restTemplate.getForEntity(
+                    url("/api/person/" + nonExistentPersonId + "/note"), String.class);
+
+            // Then
+            assertThat(response.getStatusCode(), equalTo(HttpStatus.NOT_FOUND));
+        }
+
+        @Test
+        void getNotesShouldUseDefaultPageSizeOfFive()
+        {
+            // Given
+            Person savedPerson = createPerson(randomString(), randomStringWithSuffix("@example.com"), randomString(),
+                    true);
+
+            // Create 7 notes
+            for (int i = 0; i < 7; i++)
+            {
+                createNote(savedPerson, randomString());
+            }
+
+            // When
+            ResponseEntity<NoteContainer> response = restTemplate.getForEntity(
+                    url("/api/person/" + savedPerson.getId() + "/note"), NoteContainer.class);
+
+            // Then
+            assertThat(response.getStatusCode(), equalTo(HttpStatus.OK));
+            assertThat(response.getBody(), notNullValue());
+
+            NoteContainer container = response.getBody();
+            assertThat(container.getSize(), equalTo(5));
+            assertThat(container.getElements().size(), equalTo(5));
+            assertThat(container.getTotalElements(), equalTo(7L));
+            assertThat(container.getTotalPages(), equalTo(2));
+            assertThat(container.isFirst(), equalTo(true));
+            assertThat(container.isLast(), equalTo(false));
+            assertThat(container.hasNext(), equalTo(true));
+        }
+
+        @Test
+        void getNotesCanPage()
+        {
+            // Given
+            Person savedPerson = createPerson(randomString(), randomStringWithSuffix("@example.com"), randomString(),
+                    true);
+
+            // Create 7 notes
+            List<Note> notes = new java.util.ArrayList<>();
+            for (int i = 0; i < 7; i++)
+            {
+                notes.add(createNote(savedPerson, randomString()));
+            }
+
+            // When - get page 0
+            ResponseEntity<NoteContainer> response0 = restTemplate.getForEntity(
+                    url("/api/person/" + savedPerson.getId() + "/note?page=0&size=3"), NoteContainer.class);
+
+            // Then
+            assertThat(response0.getStatusCode(), equalTo(HttpStatus.OK));
+            assertThat(response0.getBody(), notNullValue());
+
+            NoteContainer container0 = response0.getBody();
+            assertThat(container0.getPageNumber(), equalTo(0));
+            assertThat(container0.getSize(), equalTo(3));
+            assertThat(container0.getElements().size(), equalTo(3));
+            assertThat(container0.getTotalElements(), equalTo(7L));
+            assertThat(container0.getTotalPages(), equalTo(3));
+            assertThat(container0.isFirst(), equalTo(true));
+            assertThat(container0.isLast(), equalTo(false));
+            assertThat(container0.hasNext(), equalTo(true));
+            assertThat(container0.hasPrevious(), equalTo(false));
+
+            // When - get page 1
+            ResponseEntity<NoteContainer> response1 = restTemplate.getForEntity(
+                    url("/api/person/" + savedPerson.getId() + "/note?page=1&size=3"), NoteContainer.class);
+
+            // Then
+            assertThat(response1.getStatusCode(), equalTo(HttpStatus.OK));
+            assertThat(response1.getBody(), notNullValue());
+
+            NoteContainer container1 = response1.getBody();
+            assertThat(container1.getPageNumber(), equalTo(1));
+            assertThat(container1.getSize(), equalTo(3));
+            assertThat(container1.getElements().size(), equalTo(3));
+            assertThat(container1.isFirst(), equalTo(false));
+            assertThat(container1.isLast(), equalTo(false));
+            assertThat(container1.hasNext(), equalTo(true));
+            assertThat(container1.hasPrevious(), equalTo(true));
+        }
+
+        @Test
+        void getNotesShouldSortByCreatedAtAscendingByDefault()
+        {
+            // Given
+            Person savedPerson = createPerson(randomString(), randomStringWithSuffix("@example.com"), randomString(),
+                    true);
+
+            Note note1 = createNote(savedPerson, randomString());
+            // Small delay to ensure different timestamps
+            try
+            {
+                Thread.sleep(10);
+            }
+            catch (InterruptedException e)
+            {
+            }
+            Note note2 = createNote(savedPerson, randomString());
+
+            // When
+            ResponseEntity<NoteContainer> response = restTemplate.getForEntity(
+                    url("/api/person/" + savedPerson.getId() + "/note"), NoteContainer.class);
+
+            // Then
+            assertThat(response.getStatusCode(), equalTo(HttpStatus.OK));
+            assertThat(response.getBody(), notNullValue());
+
+            NoteContainer container = response.getBody();
+            assertThat(container.getElements().size(), equalTo(2));
+            // Notes should be sorted ascending (oldest first), so note1 should come before note2
+            List<Long> noteIds = container.getElements().stream().map(NoteResponse::getId).toList();
+            assertThat(noteIds.get(0), equalTo(note1.getId()));
+            assertThat(noteIds.get(1), equalTo(note2.getId()));
+        }
+
+        @Test
+        void getNotesCanSortByCreatedAtAscending()
+        {
+            // Given
+            Person savedPerson = createPerson(randomString(), randomStringWithSuffix("@example.com"), randomString(),
+                    true);
+
+            Note note1 = createNote(savedPerson, randomString());
+            try
+            {
+                Thread.sleep(10);
+            }
+            catch (InterruptedException e)
+            {
+            }
+            Note note2 = createNote(savedPerson, randomString());
+
+            // When
+            ResponseEntity<NoteContainer> response = restTemplate.getForEntity(
+                    url("/api/person/" + savedPerson.getId() + "/note?direction=asc"), NoteContainer.class);
+
+            // Then
+            assertThat(response.getStatusCode(), equalTo(HttpStatus.OK));
+            assertThat(response.getBody(), notNullValue());
+
+            NoteContainer container = response.getBody();
+            assertThat(container.getElements().size(), equalTo(2));
+            List<Long> noteIds = container.getElements().stream().map(NoteResponse::getId).toList();
+            assertThat(noteIds.get(0), equalTo(note1.getId()));
+            assertThat(noteIds.get(1), equalTo(note2.getId()));
+        }
+
+        @Test
+        void getNotesCanSortByCreatedAtDescending()
+        {
+            // Given
+            Person savedPerson = createPerson(randomString(), randomStringWithSuffix("@example.com"), randomString(),
+                    true);
+
+            Note note1 = createNote(savedPerson, randomString());
+            try
+            {
+                Thread.sleep(10);
+            }
+            catch (InterruptedException e)
+            {
+            }
+            Note note2 = createNote(savedPerson, randomString());
+
+            // When
+            ResponseEntity<NoteContainer> response = restTemplate.getForEntity(
+                    url("/api/person/" + savedPerson.getId() + "/note?direction=desc"), NoteContainer.class);
+
+            // Then
+            assertThat(response.getStatusCode(), equalTo(HttpStatus.OK));
+            assertThat(response.getBody(), notNullValue());
+
+            NoteContainer container = response.getBody();
+            assertThat(container.getElements().size(), equalTo(2));
+            // Notes should be sorted descending (newest first), so note2 should come before note1
+            List<Long> noteIds = container.getElements().stream().map(NoteResponse::getId).toList();
+            assertThat(noteIds.get(0), equalTo(note2.getId()));
+            assertThat(noteIds.get(1), equalTo(note1.getId()));
+        }
+
+        @Test
+        void getNotesWithInvalidDirectionShouldReturnBadRequest()
+        {
+            // Given
+            Person savedPerson = createPerson(randomString(), randomStringWithSuffix("@example.com"), randomString(),
+                    true);
+
+            // When
+            ResponseEntity<String> response = restTemplate.getForEntity(
+                    url("/api/person/" + savedPerson.getId() + "/note?direction=invalid"), String.class);
+
+            // Then
+            assertThat(response.getStatusCode(), equalTo(HttpStatus.BAD_REQUEST));
+        }
+
+        @Test
+        void getNotesShouldOnlyReturnNotesForSpecifiedPerson()
+        {
+            // Given
+            Person person1 = createPerson(randomString(), randomStringWithSuffix("@example.com"), randomString(), true);
+            Person person2 = createPerson(randomString(), randomStringWithSuffix("@example.com"), randomString(), true);
+
+            Note note1Person1 = createNote(person1, randomString());
+            Note note2Person1 = createNote(person1, randomString());
+            createNote(person2, randomString()); // This note should not appear
+
+            // When
+            ResponseEntity<NoteContainer> response = restTemplate.getForEntity(
+                    url("/api/person/" + person1.getId() + "/note"), NoteContainer.class);
+
+            // Then
+            assertThat(response.getStatusCode(), equalTo(HttpStatus.OK));
+            assertThat(response.getBody(), notNullValue());
+
+            NoteContainer container = response.getBody();
+            assertThat(container.getElements().size(), equalTo(2));
+            assertThat(container.getTotalElements(), equalTo(2L));
+
+            List<Long> noteIds = container.getElements().stream().map(NoteResponse::getId).toList();
+            assertThat(noteIds, hasItem(note1Person1.getId()));
+            assertThat(noteIds, hasItem(note2Person1.getId()));
+        }
+    }
+
     private Person createPerson(String name, String emailAddress, String phone, boolean isActive)
     {
         Person person = Person.builder()
@@ -862,6 +1337,18 @@ class PersonControllerIT extends BaseIT
         addDbCleanup("person", person.getId());
 
         return person;
+    }
+
+    private Note createNote(Person person, String value)
+    {
+        Note note = Note.builder()
+                .value(value)
+                .person(person)
+                .build();
+        note = noteRepository.save(note);
+        addDbCleanup("note", note.getId());
+
+        return note;
     }
 }
 

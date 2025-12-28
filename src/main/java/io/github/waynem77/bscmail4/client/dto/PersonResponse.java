@@ -45,5 +45,10 @@ public class PersonResponse
      * The timestamp when the person was created.
      */
     private Instant createdAt;
+
+    /**
+     * The number of notes associated with the person.
+     */
+    private Long numberOfNotes;
 }
 

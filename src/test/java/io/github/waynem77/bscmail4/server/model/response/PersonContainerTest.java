@@ -2,8 +2,9 @@ package io.github.waynem77.bscmail4.server.model.response;
 
 import io.github.waynem77.bscmail4.server.database.entity.Person;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 
@@ -11,9 +12,6 @@ import static io.github.waynem77.bscmail4.TestUtils.*;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 
 class PersonContainerTest
 {
@@ -22,57 +20,47 @@ class PersonContainerTest
     {
         Long personId1 = randomLong();
         Long personId2 = randomLong();
-        int pageNumber = randomInt();
-        int size = randomInt();
-        int numberOfElements = randomInt();
-        int totalPages = randomInt();
-        long totalElements = randomLong();
-        boolean isFirst = randomBool();
-        boolean isLast = randomBool();
-        boolean hasNext = randomBool();
-        boolean hasPrevious = randomBool();
+        int pageNumber = 0; // Use 0 for simplicity
+        int size = 20;
+        long totalElements = 2L; // Total elements matches the 2 people
 
-        List<Person> people = List.of(mock(Person.class), mock(Person.class));
-        given(people.get(0).getId()).willReturn(personId1);
-        given(people.get(1).getId()).willReturn(personId2);
+        Person person1 = Person.builder()
+                .id(personId1)
+                .name(randomString())
+                .emailAddress(randomStringWithSuffix("@example.com"))
+                .isActive(randomBool())
+                .build();
+        Person person2 = Person.builder()
+                .id(personId2)
+                .name(randomString())
+                .emailAddress(randomStringWithSuffix("@example.com"))
+                .isActive(randomBool())
+                .build();
+        List<Person> people = List.of(person1, person2);
 
-        List<PersonResponse> personResponses = List.of(mock(PersonResponse.class), mock(PersonResponse.class));
-        given(personResponses.get(0).getId()).willReturn(personId1);
-        given(personResponses.get(1).getId()).willReturn(personId2);
-
-        Page<Person> page = mock();
-
-        given(page.getContent()).willReturn(people);
-        given(page.getNumber()).willReturn(pageNumber);
-        given(page.getSize()).willReturn(size);
-        given(page.getNumberOfElements()).willReturn(numberOfElements);
-        given(page.getTotalPages()).willReturn(totalPages);
-        given(page.getTotalElements()).willReturn(totalElements);
-        given(page.isFirst()).willReturn(isFirst);
-        given(page.isLast()).willReturn(isLast);
-        given(page.hasNext()).willReturn(hasNext);
-        given(page.hasPrevious()).willReturn(hasPrevious);
+        // Use PageImpl instead of mocking Page (Java 23 inline mocking doesn't support mocking interfaces)
+        PageRequest pageRequest = PageRequest.of(pageNumber, size);
+        Page<Person> page = new PageImpl<>(people, pageRequest, totalElements);
 
         // When
-        try (MockedStatic<PersonResponse> mockedPersonResponse = mockStatic(PersonResponse.class))
-        {
-            mockedPersonResponse.when(() -> PersonResponse.fromPerson(people.get(0))).thenReturn(personResponses.get(0));
-            mockedPersonResponse.when(() -> PersonResponse.fromPerson(people.get(1))).thenReturn(personResponses.get(1));
+        PersonContainer container = new PersonContainer(page);
 
-            PersonContainer container = new PersonContainer(page);
-
-            // Then
-            assertThat(container, notNullValue());
-            assertThat(container.getElements(), equalTo(personResponses));
-            assertThat(container.getPageNumber(), equalTo(pageNumber));
-            assertThat(container.getSize(), equalTo(size));
-            assertThat(container.getNumberOfElements(), equalTo(numberOfElements));
-            assertThat(container.getTotalPages(), equalTo(totalPages));
-            assertThat(container.getTotalElements(), equalTo(totalElements));
-            assertThat(container.isFirst(), equalTo(isFirst));
-            assertThat(container.isLast(), equalTo(isLast));
-            assertThat(container.hasNext(), equalTo(hasNext));
-            assertThat(container.hasPrevious(), equalTo(hasPrevious));
-        }
+        // Then
+        assertThat(container, notNullValue());
+        assertThat(container.getElements(), notNullValue());
+        assertThat(container.getElements().size(), equalTo(2));
+        assertThat(container.getElements().get(0).getId(), equalTo(personId1));
+        assertThat(container.getElements().get(1).getId(), equalTo(personId2));
+        assertThat(container.getElements().get(0).getNumberOfNotes(), equalTo(0L));
+        assertThat(container.getElements().get(1).getNumberOfNotes(), equalTo(0L));
+        assertThat(container.getPageNumber(), equalTo(pageNumber));
+        assertThat(container.getSize(), equalTo(size));
+        assertThat(container.getNumberOfElements(), equalTo(people.size()));
+        assertThat(container.getTotalPages(), equalTo(page.getTotalPages()));
+        assertThat(container.getTotalElements(), equalTo(totalElements));
+        assertThat(container.isFirst(), equalTo(page.isFirst()));
+        assertThat(container.isLast(), equalTo(page.isLast()));
+        assertThat(container.hasNext(), equalTo(page.hasNext()));
+        assertThat(container.hasPrevious(), equalTo(page.hasPrevious()));
     }
 }
